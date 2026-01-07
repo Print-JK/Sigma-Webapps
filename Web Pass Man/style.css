@@ -1,0 +1,93 @@
+body {
+    color: white;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 900px;
+    margin: auto;
+    padding: 2rem;
+    background-color: #1a1a1a;
+}
+
+.section {
+    margin-bottom: 2rem;
+    border-bottom: 1px solid #444;
+    padding-bottom: 2rem;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* Table Styling */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background: #2c2b2b;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #444;
+}
+
+th { background-color: #333; }
+
+/* The Secret Sauce: Reveal on Hover */
+.password-cell {
+    filter: blur(5px);
+    transition: filter 0.3s ease;
+    cursor: pointer;
+    background: #363636;
+    border-radius: 4px;
+    padding: 5px;
+}
+
+.password-cell:hover {
+    filter: blur(0);
+}
+
+/* Editable cells */
+[contenteditable="true"] {
+    outline: 1px dashed #4f46e5;
+    padding: 5px;
+}
+
+button {
+    background: linear-gradient(to right, #4f46e5, #9333ea);
+    color: white;
+    padding: 0.75rem 1.2rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+button.secondary {
+    background: #444;
+}
+
+button.delete-btn {
+    background: #e11d48;
+    padding: 5px 10px;
+    font-size: 0.8rem;
+}
+
+#keyStatus {
+    font-size: 0.9rem;
+    color: #10b981;
+}
+
+.custom-file-upload {
+    border: 1px solid #4f46e5;
+    display: inline-block;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 6px;
+}
+
+input[type="file"] { display: none; }
