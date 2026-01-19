@@ -1,0 +1,9 @@
+- can we remove sectionDivider property ?
+- can we remove nameSource property ?
+
+- improve vector fill / stroke help sections
+
+check: https://github.com/TheNicker/libpsd
+
+- zip with prediction: https://github.com/TheNicker/libpsd/blob/master/src/psd_zip.c
+- also support saving with zip compression ?
