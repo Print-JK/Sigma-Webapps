@@ -4,182 +4,7 @@
   <meta charset="utf-8" />
   <title>ZIP Encryptor/Decryptor</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    /* Dark theme base */
-    body {
-      color: white;
-      font-family: system-ui, sans-serif;
-      margin: 0;
-      padding: 16px;
-      background-color: #2c2b2b;
-    }
-
-    /* Layout */
-    .container { max-width: 900px; margin: 0 auto; }
-    .row { display: grid; gap: 12px; grid-template-columns: 1fr; }
-    @media (min-width: 768px) { .row { grid-template-columns: 1fr 1fr; } }
-
-    /* Cards */
-    .card {
-      border: 1px solid #3a3a3a;
-      border-radius: 8px;
-      padding: 12px;
-      background: #2f2f2f;
-    }
-
-/* Hide the card by default with opacity */
-.box {
-  opacity: 0;
-  transition: opacity 0.4s ease;
-  pointer-events: none; /* prevent clicks when hidden */
-}
-
-/* Reveal the card when hovering over its parent section */
-.section:hover .box {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-
-
-    /* Headings */
-    h1, h2, h3 { color: white; }
-
-    /* Dropzone */
-    .dropzone {
-      border: 2px dashed #888;
-      padding: 16px;
-      text-align: center;
-      border-radius: 8px;
-      color: white;
-      background-color: #2c2b2b;
-    }
-    .dropzone:hover { background-color: #303030; }
-
-    /* Progress bar */
-    .progress {
-      height: 12px;
-      background: #363636;
-      border-radius: 6px;
-      overflow: hidden;
-    }
-    .progress-bar {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(to right, #4f46e5, #9333ea);
-      transition: width 0.2s ease;
-    }
-
-    /* Controls row */
-    .controls { display: flex; gap: 8px; flex-wrap: wrap; }
-
-    /* Preview area */
-    .preview { margin-top: 12px; }
-    .carousel { display: grid; place-items: center; }
-    .carousel img, .carousel video, .preview iframe {
-      max-width: 100%;
-      max-height: 60vh;
-    }
-
-    /* Buttons */
-    button {
-      background: linear-gradient(to right, #4f46e5, #9333ea);
-      color: white;
-      font-size: 1rem;
-      padding: 0.75rem 1.5rem;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.3s ease;
-    }
-    button:hover {
-      background: linear-gradient(to right, #4338ca, #7e22ce);
-    }
-    button.primary {
-      background: linear-gradient(to right, #4f46e5, #9333ea);
-      color: white;
-      border: none;
-    }
-
-    /* Links styled like subtle buttons when used for downloads */
-    a {
-      color: #a78bfa;
-      text-decoration: none;
-      padding: 0.5rem 0.75rem;
-      border-radius: 6px;
-    }
-    a:hover { text-decoration: underline; }
-
-    /* Inputs */
-    input[type="file"] {
-      background: #363636;
-      color: white;
-      font-size: 1rem;
-      padding: 0.75rem 1.5rem;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.3s ease;
-    }
-    input[type="file"]:hover { background: #3b3b3b; }
-    
-    /* Status text */
-    #keyStatus, #zipStatus, #progressLabel { color: #e5e5e5; }
-
-    /* Utility */
-    .hidden { display: none; }
-    .video-wrapper {
-  position: relative;
-  background: black;
-  max-width: 100%;
-  margin: auto;
-}
-
-.video-player {
-  width: 100%;
-  height: auto;
-  display: block;
-  background: black;
-}
-
-.video-controls {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  background: rgba(0,0,0,0.7);
-  display: flex;
-  align-items: center;
-  padding: 6px;
-  gap: 8px;
-}
-
-.control-btn {
-  background: none;
-  border: none;
-  color: white;
-  font-size: 1.2rem;
-  cursor: pointer;
-}
-
-.seek-bar {
-  flex: 1;
-}
-
-.volume-bar {
-  width: 80px;
-}
-
-select {
-  background: #2c2b2b;
-  color: white;
-  border: none;
-  padding: 4px;
-  border-radius: 4px;
-}
-
-
-  </style>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="container">
@@ -215,21 +40,19 @@ select {
       </div>
     </div>
 
-    
     <div class="section">
-    <h2>Preview</h2>
-    <div class="box">
-      <div id="previewArea" class="preview"></div>
-      <div id="carouselControls" class="controls hidden">
-        <button id="prevBtn">Prev</button>
-        <button id="nextBtn">Next</button>
+      <h2>Preview</h2>
+      <div class="box">
+        <div id="previewArea" class="preview"></div>
       </div>
     </div>
   </div>
 
-  <div> Pass Man</div>
-  <script src="js/jszip.min.js"></script>
-  <script src="js/FileSaver.min.js"></script>
-  <script src="app.js"></script>
+  <!-- Import JSZip from node_modules instead of local script -->
+  <script type="module">
+    import JSZip from 'jszip';
+    window.JSZip = JSZip;
+  </script>
+  <script type="module" src="/app.js"></script>
 </body>
 </html>
