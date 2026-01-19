@@ -1,3 +1,4 @@
+
 import { readPsd } from 'ag-psd';
 
 let keyBytes = null;
@@ -30,6 +31,7 @@ async function simulateChunkedXor(buffer, key, onProgress) {
   const CHUNK = 1024 * 256;
   const input = new Uint8Array(buffer);
   const output = new Uint8Array(input.length);
+
   for (let offset = 0; offset < input.length; offset += CHUNK) {
     const end = Math.min(input.length, offset + CHUNK);
     for (let i = offset; i < end; i++) {
@@ -46,11 +48,13 @@ btnGenKey.addEventListener('click', () => {
   const size = 32;
   keyBytes = new Uint8Array(size);
   crypto.getRandomValues(keyBytes);
+
   const blob = new Blob([keyBytes], { type: 'application/octet-stream' });
   downloadKeyLink.classList.remove('hidden');
   downloadKeyLink.textContent = 'Download key.bin';
   downloadKeyLink.href = URL.createObjectURL(blob);
   downloadKeyLink.download = 'key.bin';
+
   keyStatus.textContent = `Key loaded (length: ${size} bytes).`;
 });
 
@@ -90,14 +94,18 @@ btnEncrypt.addEventListener('click', async () => {
 
   setProgress(0, 'Reading ZIP…');
   const buf = await zipFile.arrayBuffer();
+
   setProgress(10, 'Encrypting…');
   const encBuf = await simulateChunkedXor(buf, keyBytes, pct => setProgress(pct, 'Encrypting…'));
+
   const encBlob = new Blob([encBuf], { type: 'application/octet-stream' });
   const resultName = zipFile.name.replace(/\.zip$/i, '') + '.enc';
+
   downloadResultLink.classList.remove('hidden');
   downloadResultLink.textContent = `Download ${resultName}`;
   downloadResultLink.href = URL.createObjectURL(encBlob);
   downloadResultLink.download = resultName;
+
   setProgress(100, 'Encryption complete.');
 });
 
@@ -109,20 +117,24 @@ btnDecrypt.addEventListener('click', async () => {
 
   setProgress(0, 'Reading file…');
   const encBuf = await zipFile.arrayBuffer();
+
   setProgress(10, 'Decrypting…');
   const decBuf = await simulateChunkedXor(encBuf, keyBytes, pct => setProgress(pct, 'Decrypting…'));
+
   setProgress(60, 'Parsing ZIP…');
-  
   try {
     const zip = await JSZip.loadAsync(decBuf);
     setProgress(75, 'Preparing previews…');
     await buildPreviewFromZip(zip);
+
     const decBlob = new Blob([decBuf], { type: 'application/zip' });
     const resultName = zipFile.name.replace(/\.enc$/i, '') + '.zip';
+
     downloadResultLink.classList.remove('hidden');
     downloadResultLink.textContent = `Download ${resultName}`;
     downloadResultLink.href = URL.createObjectURL(decBlob);
     downloadResultLink.download = resultName;
+
     setProgress(100, 'Decryption complete.');
   } catch (err) {
     setProgress(0, 'Idle.');
@@ -168,14 +180,12 @@ function clearPreview() {
   previewItems = [];
   downloadResultLink.classList.add('hidden');
 }
-
 function renderPreview() {
   previewArea.innerHTML = '';
   if (!previewItems.length) {
     previewArea.innerHTML = '<p>No previewable files found in the ZIP.</p>';
     return;
   }
-
   const grid = document.createElement('div');
   grid.className = 'preview-grid';
 
@@ -205,21 +215,28 @@ function renderPreview() {
   previewArea.appendChild(grid);
 }
 
-/* Collect layers from PSD with original properties */
+/* Collect layers from PSD with original properties (normalized) */
 function collectLayers(children, depth = 0) {
   let result = [];
   if (!children) return result;
-  
+
   for (let i = children.length - 1; i >= 0; i--) {
     const child = children[i];
-    
+
+    // Normalize opacity: accept 0–255 or 0–1, fallback to fillOpacity then 1
+    const rawOpacity = (child.opacity !== undefined ? child.opacity : child.fillOpacity);
+    let normOpacity = 1;
+    if (rawOpacity !== undefined && rawOpacity !== null && !Number.isNaN(rawOpacity)) {
+      normOpacity = rawOpacity > 1 ? (rawOpacity / 255) : Math.max(0, Math.min(1, rawOpacity));
+    }
+
     if (child.children && child.children.length > 0) {
       result.push({
         name: child.name || 'Group',
         isFolder: true,
         depth: depth,
         visible: child.hidden !== undefined ? !child.hidden : true,
-        opacity: child.opacity !== undefined ? child.opacity / 255 : 1,
+        opacity: normOpacity,
       });
       result = result.concat(collectLayers(child.children, depth + 1));
     } else if (child.canvas) {
@@ -231,8 +248,8 @@ function collectLayers(children, depth = 0) {
         visible: child.hidden !== undefined ? !child.hidden : true,
         isFolder: false,
         depth: depth,
-        clipping: child.clipping || false,
-        opacity: child.opacity !== undefined ? child.opacity / 255 : 1,
+        clipping: !!child.clipping,
+        opacity: normOpacity,
         blendMode: child.blendMode || 'normal',
       });
     }
@@ -243,10 +260,8 @@ function collectLayers(children, depth = 0) {
 /* Modal viewer */
 function openModal(startIndex) {
   let currentIndex = startIndex;
-
   const modal = document.createElement('div');
   modal.className = 'modal';
-
   const content = document.createElement('div');
   content.className = 'modal-content';
   modal.appendChild(content);
@@ -254,15 +269,11 @@ function openModal(startIndex) {
   const closeBtn = document.createElement('button');
   closeBtn.className = 'modal-close';
   closeBtn.textContent = 'Close';
-  closeBtn.onclick = () => {
-    cleanupModal();
-    modal.remove();
-  };
+  closeBtn.onclick = () => { cleanupModal(); modal.remove(); };
   modal.appendChild(closeBtn);
 
   let leftZone = null;
   let rightZone = null;
-
   function removeTapZones() {
     if (leftZone) { leftZone.remove(); leftZone = null; }
     if (rightZone) { rightZone.remove(); rightZone = null; }
@@ -288,7 +299,6 @@ function openModal(startIndex) {
 
       let zoomed = false;
       let scale = 1;
-
       const setZoom = (newScale, pivotX, pivotY) => {
         scale = Math.max(1, Math.min(3, newScale));
         zoomed = scale > 1;
@@ -370,13 +380,11 @@ function openModal(startIndex) {
         startScrollLeft: 0, startScrollTop: 0,
         startDist: 0, startScale: 1,
       };
-
       const distance = (t1, t2) => {
         const dx = t2.clientX - t1.clientX;
         const dy = t2.clientY - t1.clientY;
         return Math.sqrt(dx*dx + dy*dy);
       };
-
       modal.addEventListener('touchstart', (e) => {
         if (e.touches.length === 1) {
           if (zoomed) {
@@ -397,7 +405,6 @@ function openModal(startIndex) {
           img.style.transformOrigin = `${midX}px ${midY}px`;
         }
       }, { passive: true });
-
       modal.addEventListener('touchmove', (e) => {
         if (touchState.mode === 'pan' && zoomed && e.touches.length === 1) {
           const t = e.touches[0];
@@ -411,10 +418,7 @@ function openModal(startIndex) {
           setZoom(touchState.startScale * factor);
         }
       }, { passive: true });
-
-      modal.addEventListener('touchend', () => {
-        touchState.mode = null;
-      });
+      modal.addEventListener('touchend', () => { touchState.mode = null; });
 
       window.onkeydown = (e) => {
         if (zoomed) return;
@@ -425,19 +429,16 @@ function openModal(startIndex) {
           currentIndex = (currentIndex + 1) % previewItems.length;
           renderFile(previewItems[currentIndex]);
         } else if (e.key === 'Escape') {
-          cleanupModal();
-          modal.remove();
+          cleanupModal(); modal.remove();
         }
       };
     }
-
     else if (item.type === 'psd') {
       const psdContainer = document.createElement('div');
       psdContainer.className = 'psd-viewer';
 
       const layersPanel = document.createElement('div');
       layersPanel.className = 'psd-layers-panel';
-      
       const layersTitle = document.createElement('h3');
       layersTitle.textContent = 'Layers';
       layersPanel.appendChild(layersTitle);
@@ -448,7 +449,6 @@ function openModal(startIndex) {
 
       const canvasArea = document.createElement('div');
       canvasArea.className = 'psd-canvas-area';
-      
       const canvas = document.createElement('canvas');
       canvas.className = 'psd-canvas';
       canvas.width = item.psdData.width;
@@ -465,11 +465,11 @@ function openModal(startIndex) {
       layers.forEach((layer, index) => {
         const li = document.createElement('li');
         li.className = 'psd-layer-item';
-        
+
         if (layer.depth > 0) {
           li.style.paddingLeft = `${8 + layer.depth * 16}px`;
         }
-        
+
         if (layer.isFolder) {
           const checkbox = document.createElement('input');
           checkbox.type = 'checkbox';
@@ -489,15 +489,13 @@ function openModal(startIndex) {
             }
             renderPsd(ctx, canvas, layers);
           });
-          
           const folderIcon = document.createElement('span');
           folderIcon.textContent = '📁 ';
-          
           const label = document.createElement('span');
           label.textContent = layer.name;
           label.style.fontWeight = 'bold';
           label.style.color = '#a8a8a8';
-          
+
           li.appendChild(checkbox);
           li.appendChild(folderIcon);
           li.appendChild(label);
@@ -509,13 +507,12 @@ function openModal(startIndex) {
             layer.visible = checkbox.checked;
             renderPsd(ctx, canvas, layers);
           });
-          
           const label = document.createElement('span');
           label.textContent = layer.name || `Layer ${index}`;
-          
+
           li.appendChild(checkbox);
           li.appendChild(label);
-          
+
           if (layer.clipping) {
             const clipIcon = document.createElement('span');
             clipIcon.textContent = ' 🔗';
@@ -524,7 +521,6 @@ function openModal(startIndex) {
             li.appendChild(clipIcon);
           }
         }
-        
         layersList.appendChild(li);
       });
 
@@ -532,12 +528,10 @@ function openModal(startIndex) {
 
       window.onkeydown = (e) => {
         if (e.key === 'Escape') {
-          cleanupModal();
-          modal.remove();
+          cleanupModal(); modal.remove();
         }
       };
     }
-
     else if (item.type === 'video') {
       const shell = document.createElement('div');
       shell.className = 'video-shell';
@@ -633,7 +627,6 @@ function openModal(startIndex) {
         const tapX = e.changedTouches[0].clientX;
         const width = shell.clientWidth;
         const corner = width * 0.25;
-
         if (now - lastTap < 300) {
           if (tapX < corner) {
             video.currentTime = Math.max(0, video.currentTime - 10);
@@ -648,7 +641,6 @@ function openModal(startIndex) {
 
       const startBoost = () => { video.playbackRate = 2; showOverlay('⚡ 2x'); };
       const stopBoost = () => { video.playbackRate = parseFloat(speedSelect.value); };
-
       shell.addEventListener('mousedown', e => {
         const w = shell.clientWidth;
         if (e.offsetX > w * 0.25 && e.offsetX < w * 0.75) startBoost();
@@ -674,12 +666,10 @@ function openModal(startIndex) {
         } else if (e.key === 'ArrowRight') {
           video.currentTime = Math.min(video.duration || Infinity, video.currentTime + 5);
         } else if (e.key === 'Escape') {
-          cleanupModal();
-          modal.remove();
+          cleanupModal(); modal.remove();
         }
       };
     }
-
     else if (item.type === 'text') {
       const link = document.createElement('a');
       const blob = new Blob([item.text], { type: 'text/plain' });
@@ -688,7 +678,6 @@ function openModal(startIndex) {
       link.textContent = `Open ${item.name} in new tab`;
       content.appendChild(link);
     }
-
     else if (item.type === 'pdf') {
       const link = document.createElement('a');
       link.href = item.url;
@@ -706,76 +695,124 @@ function openModal(startIndex) {
   document.body.appendChild(modal);
 }
 
-/* Render PSD with proper clipping masks and opacity */
+/* Render PSD with proper clipping masks, blend modes, and opacity */
 function renderPsd(ctx, canvas, layers) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
+
+  // Blend mode mapping (Canvas 2D supports many Photoshop-like modes)
+  const blendMap = {
+    'normal': 'source-over',
+    'multiply': 'multiply',
+    'screen': 'screen',
+    'overlay': 'overlay',
+    'darken': 'darken',
+    'lighten': 'lighten',
+    'color-dodge': 'color-dodge',
+    'color-burn': 'color-burn',
+    'hard-light': 'hard-light',
+    'soft-light': 'soft-light',
+    'difference': 'difference',
+    'exclusion': 'exclusion',
+    'hue': 'hue',
+    'saturation': 'saturation',
+    'color': 'color',
+    'luminosity': 'luminosity',
+  };
+
+  // Walk from top to bottom as you already do
   let i = layers.length - 1;
-  
   while (i >= 0) {
     const layer = layers[i];
-    
-    if (layer.isFolder || !layer.visible || !layer.canvas) {
-      i--;
-      continue;
-    }
-    
+
+    // Skip folders, hidden, or empty layers
+    if (layer.isFolder || !layer.visible || !layer.canvas) { i--; continue; }
+
+    // Build clipping group: consecutive layers above base with clipping=true,
+    // followed by a base layer (clipping=false).
     let clippingGroup = [layer];
     let j = i - 1;
-    
     while (j >= 0 && layers[j].clipping && layers[j].visible && layers[j].canvas) {
       clippingGroup.unshift(layers[j]);
       j--;
     }
-    
+
+    // If group has more than one item, last item is the base.
     if (clippingGroup.length > 1) {
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = canvas.width;
-      tempCanvas.height = canvas.height;
-      const tempCtx = tempCanvas.getContext('2d');
-      
       const base = clippingGroup[clippingGroup.length - 1];
-      tempCtx.globalAlpha = base.opacity;
-      tempCtx.drawImage(base.canvas, base.left, base.top);
-      
+
+      // Offscreen buffer for the group
+      const groupCanvas = document.createElement('canvas');
+      groupCanvas.width = canvas.width;
+      groupCanvas.height = canvas.height;
+      const gctx = groupCanvas.getContext('2d');
+
+      // Prepare a mask canvas with only base's alpha area
+      const maskCanvas = document.createElement('canvas');
+      maskCanvas.width = canvas.width;
+      maskCanvas.height = canvas.height;
+      const mctx = maskCanvas.getContext('2d');
+
+      // Draw the base at full opacity into both group (visual) and mask (alpha)
+      // We delay overall group opacity & base blend mode until final composite.
+      mctx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+      mctx.drawImage(base.canvas, base.left, base.top);
+
+      gctx.save();
+      gctx.globalCompositeOperation = 'source-over';
+      gctx.globalAlpha = 1; // base opacity will be applied on final composite
+      gctx.drawImage(base.canvas, base.left, base.top);
+      gctx.restore();
+
+      // For each clipped layer, mask to base alpha, then blend into the group
       for (let k = 0; k < clippingGroup.length - 1; k++) {
-        const clippingLayer = clippingGroup[k];
-        tempCtx.save();
-        tempCtx.globalCompositeOperation = 'source-atop';
-        tempCtx.globalAlpha = clippingLayer.opacity;
-        tempCtx.drawImage(clippingLayer.canvas, clippingLayer.left, clippingLayer.top);
-        tempCtx.restore();
+        const cl = clippingGroup[k];
+
+        // 1) Draw clipped layer into its own layer buffer, apply its own opacity there
+        const layerBuf = document.createElement('canvas');
+        layerBuf.width = canvas.width;
+        layerBuf.height = canvas.height;
+        const lctx = layerBuf.getContext('2d');
+
+        lctx.save();
+        lctx.globalCompositeOperation = 'source-over';
+        lctx.globalAlpha = (cl.opacity !== undefined ? cl.opacity : 1);
+        lctx.drawImage(cl.canvas, cl.left, cl.top);
+        lctx.restore();
+
+        // 2) Mask it by base alpha: keep only overlap with base
+        lctx.save();
+        lctx.globalCompositeOperation = 'destination-in'; // keep where base (mask) is opaque
+        lctx.drawImage(maskCanvas, 0, 0);
+        lctx.restore();
+
+        // 3) Composite the masked layer into group with its blend mode
+        gctx.save();
+        const clBlend = cl.blendMode ? blendMap[(cl.blendMode + '').toLowerCase()] : null;
+        gctx.globalCompositeOperation = clBlend || 'source-over';
+        gctx.globalAlpha = 1; // opacity already applied to layer buffer
+        gctx.drawImage(layerBuf, 0, 0);
+        gctx.restore();
       }
-      
-      ctx.drawImage(tempCanvas, 0, 0);
+
+      // Composite entire group into main canvas using the BASE layer's blend & opacity
+      ctx.save();
+      const baseBlend = base.blendMode ? blendMap[(base.blendMode + '').toLowerCase()] : null;
+      ctx.globalCompositeOperation = baseBlend || 'source-over';
+      ctx.globalAlpha = (base.opacity !== undefined ? base.opacity : 1);
+      ctx.drawImage(groupCanvas, 0, 0);
+      ctx.restore();
+
+      // Skip processed layers
       i = j;
     } else {
+      // Single (non-clipped) layer — draw with its own blend mode & opacity
       ctx.save();
-      
-      if (layer.blendMode && layer.blendMode !== 'normal') {
-        const blendMap = {
-          'multiply': 'multiply',
-          'screen': 'screen',
-          'overlay': 'overlay',
-          'darken': 'darken',
-          'lighten': 'lighten',
-          'color-dodge': 'color-dodge',
-          'color-burn': 'color-burn',
-          'hard-light': 'hard-light',
-          'soft-light': 'soft-light',
-          'difference': 'difference',
-          'exclusion': 'exclusion',
-        };
-        
-        const canvasBlendMode = blendMap[layer.blendMode.toLowerCase()];
-        if (canvasBlendMode) {
-          ctx.globalCompositeOperation = canvasBlendMode;
-        }
-      }
-      
-      //ctx.globalAlpha = layer.opacity;
+      const blend = layer.blendMode ? blendMap[(layer.blendMode + '').toLowerCase()] : null;
+      if (blend) ctx.globalCompositeOperation = blend;
+      ctx.globalAlpha = (layer.opacity !== undefined ? layer.opacity : 1);
       ctx.drawImage(layer.canvas, layer.left, layer.top);
       ctx.restore();
+
       i--;
     }
   }
