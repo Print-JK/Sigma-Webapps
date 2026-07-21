@@ -261,115 +261,331 @@ function renderPSD(file, stage) {
   reader.onload = (e) => {
     const buffer = new Uint8Array(e.target.result);
     try {
-      const view = new DataView(buffer.buffer);
-      
-      if (view.getUint32(0) !== 0x38425053) {
-        throw new Error('Invalid PSD header');
-      }
+      const parsed = parsePSDFile(buffer);
+      psdLayers = parsed.layers;
 
-      const canvasHeight = view.getUint32(14);
-      const canvasWidth = view.getUint32(18);
-      const depth = view.getUint16(22);
-
-      if (depth !== 8) {
-        stage.innerHTML = '<div class="placeholder"><p>PSD Preview requires 8-bit depth mode.</p></div>';
-        return;
-      }
-
-      let offset = 26;
-      const colorDataLen = view.getUint32(offset); offset += 4 + colorDataLen;
-      const imageResLen = view.getUint32(offset); offset += 4 + imageResLen;
-      
-      // Section 4: Layer & Mask Info Section
-      const layerAndMaskLen = view.getUint32(offset); 
-      const layerSectionOffset = offset + 4;
-      offset += 4 + layerAndMaskLen;
-
-      psdLayers = [];
-
-      if (layerAndMaskLen > 0) {
-        let layerPtr = layerSectionOffset + 4;
-        const layerCount = Math.abs(view.getInt16(layerPtr)); 
-        layerPtr += 2;
-
-        for (let i = 0; i < layerCount; i++) {
-          const top = view.getInt32(layerPtr);
-          const left = view.getInt32(layerPtr + 4);
-          const bottom = view.getInt32(layerPtr + 8);
-          const right = view.getInt32(layerPtr + 12);
-          layerPtr += 16;
-
-          const numChannels = view.getUint16(layerPtr); 
-          layerPtr += 2 + (numChannels * 6); // Skip channel information IDs
-
-          const blendSig = view.getUint32(layerPtr); layerPtr += 4; // '8BIM'
-          const blendMode = view.getUint32(layerPtr); layerPtr += 4;
-          const opacity = view.getUint8(layerPtr); layerPtr += 1;
-          const clipping = view.getUint8(layerPtr); layerPtr += 1;
-          const flags = view.getUint8(layerPtr); layerPtr += 1;
-          const filler = view.getUint8(layerPtr); layerPtr += 1;
-
-          const extraLen = view.getUint32(layerPtr); layerPtr += 4 + extraLen;
-
-          const lWidth = right - left;
-          const lHeight = bottom - top;
-
-          if (lWidth > 0 && lHeight > 0) {
-            // Create layer canvas buffer
-            const lCanvas = document.createElement('canvas');
-            lCanvas.width = lWidth;
-            lCanvas.height = lHeight;
-            const lCtx = lCanvas.getContext('2d');
-            const lImgData = lCtx.createImageData(lWidth, lHeight);
-
-            // Create solid placeholder image data per layer bounding box
-            for (let p = 0; p < lWidth * lHeight * 4; p += 4) {
-              lImgData.data[p] = (i * 70) % 255;     // Red
-              lImgData.data[p + 1] = (i * 130) % 255; // Green
-              lImgData.data[p + 2] = (i * 200) % 255; // Blue
-              lImgData.data[p + 3] = opacity;         // Opacity
-            }
-            lCtx.putImageData(lImgData, 0, 0);
-
-            psdLayers.unshift({
-              id: i,
-              name: `Layer ${i + 1} (${lWidth}x${lHeight})`,
-              visible: (flags & 0x02) === 0, // Flag bit 1 = hidden
-              left: left,
-              top: top,
-              width: lWidth,
-              height: lHeight,
-              canvas: lCanvas
-            });
-          }
-        }
-      }
-
-      // Fallback if no sub-layers are extracted from Section 4
       if (psdLayers.length === 0) {
         const baseCanvas = document.createElement('canvas');
-        baseCanvas.width = canvasWidth;
-        baseCanvas.height = canvasHeight;
-        
+        baseCanvas.width = parsed.width;
+        baseCanvas.height = parsed.height;
         psdLayers.push({
           id: 0,
           name: 'Flattened Composite',
           visible: true,
           left: 0,
           top: 0,
-          width: canvasWidth,
-          height: canvasHeight,
+          width: parsed.width,
+          height: parsed.height,
           canvas: baseCanvas
         });
       }
 
-      renderPSDLayout(stage, canvasWidth, canvasHeight);
-
+      renderPSDLayout(stage, parsed.width, parsed.height);
     } catch (err) {
+      console.error(err);
       stage.innerHTML = `<div class="placeholder"><p>Unable to parse PSD file layer structure.</p></div>`;
     }
   };
   reader.readAsArrayBuffer(file);
+}
+
+function parsePSDFile(buffer) {
+  const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+
+  if (view.getUint32(0) !== 0x38425053) {
+    throw new Error('Invalid PSD header');
+  }
+
+  const canvasHeight = view.getUint32(14);
+  const canvasWidth = view.getUint32(18);
+  const depth = view.getUint16(22);
+
+  if (depth !== 8) {
+    throw new Error('PSD Preview requires 8-bit depth mode.');
+  }
+
+  const colorMode = view.getUint16(24);
+  let offset = 26;
+
+  const colorDataLen = view.getUint32(offset);
+  offset += 4 + colorDataLen;
+
+  const imageResLen = view.getUint32(offset);
+  offset += 4 + imageResLen;
+
+  const layerAndMaskLen = view.getUint32(offset);
+  offset += 4;
+
+  const layers = [];
+
+  if (layerAndMaskLen > 0) {
+    const layerSectionEnd = offset + layerAndMaskLen;
+    const layerInfoLen = view.getUint32(offset);
+    offset += 4;
+
+    const layerInfoStart = offset;
+    let layerCount = Math.abs(view.getInt16(offset));
+    offset += 2;
+
+    const parsedLayers = [];
+
+    for (let i = 0; i < layerCount; i++) {
+      const top = view.getInt32(offset);
+      const left = view.getInt32(offset + 4);
+      const bottom = view.getInt32(offset + 8);
+      const right = view.getInt32(offset + 12);
+      offset += 16;
+
+      const numChannels = view.getUint16(offset);
+      offset += 2;
+
+      const channels = [];
+      for (let c = 0; c < numChannels; c++) {
+        const channelId = view.getInt16(offset);
+        const channelLength = view.getUint32(offset + 2);
+        offset += 6;
+        channels.push({ id: channelId, length: channelLength });
+      }
+
+      const blendSig = readAscii(view, offset, 4);
+      offset += 4;
+      const blendMode = readAscii(view, offset, 4);
+      offset += 4;
+      const opacity = view.getUint8(offset);
+      offset += 1;
+      const clipping = view.getUint8(offset);
+      offset += 1;
+      const flags = view.getUint8(offset);
+      offset += 1;
+      const filler = view.getUint8(offset);
+      offset += 1;
+
+      const extraLen = view.getUint32(offset);
+      offset += 4;
+      const extraDataStart = offset;
+      const extraDataEnd = offset + extraLen;
+
+      let layerName = `Layer ${i + 1} (${right - left}x${bottom - top})`;
+      if (extraLen >= 12 && extraDataEnd <= buffer.byteLength) {
+        const maskDataLen = view.getUint32(offset);
+        offset += 4 + maskDataLen;
+        if (offset + 4 <= extraDataEnd) {
+          const blendRangesLen = view.getUint32(offset);
+          offset += 4 + blendRangesLen;
+          if (offset < extraDataEnd) {
+            const nameLen = view.getUint8(offset);
+            offset += 1;
+            const actualNameLen = Math.min(nameLen, extraDataEnd - offset);
+            if (actualNameLen > 0) {
+              layerName = readAscii(view, offset, actualNameLen) || layerName;
+            }
+            offset += actualNameLen;
+            while (offset < extraDataEnd && ((offset - extraDataStart) % 4) !== 0) {
+              offset += 1;
+            }
+          }
+        }
+      }
+      offset = extraDataEnd;
+
+      parsedLayers.push({
+        id: i,
+        name: layerName,
+        visible: (flags & 0x02) === 0,
+        left,
+        top,
+        width: right - left,
+        height: bottom - top,
+        channels,
+        opacity,
+        flags,
+        blendMode,
+        blendSig,
+        clipping
+      });
+    }
+
+    let imageOffset = offset;
+    for (const layer of parsedLayers) {
+      const decoded = decodePSDLayerImage(buffer, imageOffset, layer, depth, colorMode);
+      imageOffset += decoded.bytesConsumed;
+      if (decoded.canvas) {
+        layer.canvas = decoded.canvas;
+      } else {
+        layer.canvas = createPlaceholderCanvas(layer.width, layer.height, layer.opacity, layer.id);
+      }
+
+      layers.push(layer);
+    }
+
+    // Do not parse global layer mask info for previewing sub-layers.
+    offset = layerSectionEnd;
+  }
+
+  return {
+    width: canvasWidth,
+    height: canvasHeight,
+    depth,
+    colorMode,
+    layers
+  };
+}
+
+function readAscii(view, offset, length) {
+  let text = '';
+  for (let i = 0; i < length; i++) {
+    text += String.fromCharCode(view.getUint8(offset + i));
+  }
+  return text;
+}
+
+function createPlaceholderCanvas(width, height, opacity, id) {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  const imgData = ctx.createImageData(width, height);
+  for (let p = 0; p < width * height * 4; p += 4) {
+    imgData.data[p] = (id * 70) % 255;
+    imgData.data[p + 1] = (id * 130) % 255;
+    imgData.data[p + 2] = (id * 200) % 255;
+    imgData.data[p + 3] = opacity;
+  }
+  ctx.putImageData(imgData, 0, 0);
+  return canvas;
+}
+
+function decodePSDLayerImage(buffer, startOffset, layer, depth, colorMode) {
+  const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+  let offset = startOffset;
+  const channelBuffers = {};
+  let bytesConsumed = 0;
+
+  for (const channel of layer.channels) {
+    const channelStart = offset;
+    if (offset + 2 > buffer.byteLength) {
+      break;
+    }
+
+    const compression = view.getUint16(offset);
+    offset += 2;
+
+    const channelBytes = channel.length - 2;
+    let decoded = null;
+
+    if (compression === 0) {
+      if (offset + channelBytes <= buffer.byteLength) {
+        decoded = new Uint8Array(buffer.buffer, buffer.byteOffset + offset, channelBytes);
+      }
+      offset += channelBytes;
+    } else if (compression === 1) {
+      const rowCounts = [];
+      for (let y = 0; y < layer.height; y++) {
+        rowCounts.push(view.getUint16(offset));
+        offset += 2;
+      }
+      const rleStart = offset;
+      const rleEnd = channelStart + channel.length;
+      if (rleEnd <= buffer.byteLength) {
+        const compressedBytes = new Uint8Array(buffer.buffer, buffer.byteOffset + rleStart, rleEnd - rleStart);
+        decoded = decodePSDRowRLE(compressedBytes, layer.width, layer.height);
+      }
+      offset = rleEnd;
+    } else {
+      // Unsupported compression path: skip the channel bytes and keep blank data.
+      offset += channelBytes;
+    }
+
+    bytesConsumed += channel.length;
+    channelBuffers[channel.id] = decoded;
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = layer.width;
+  canvas.height = layer.height;
+  const ctx = canvas.getContext('2d');
+  const imageData = ctx.createImageData(layer.width, layer.height);
+  const pixelCount = layer.width * layer.height;
+
+  const alpha = channelBuffers[-1] || null;
+  const fillAlpha = alpha ? alpha : new Uint8Array(pixelCount).fill(255);
+
+  if (colorMode === 3) {
+    const red = channelBuffers[0] || new Uint8Array(pixelCount);
+    const green = channelBuffers[1] || new Uint8Array(pixelCount);
+    const blue = channelBuffers[2] || new Uint8Array(pixelCount);
+
+    for (let p = 0; p < pixelCount; p++) {
+      const base = p * 4;
+      imageData.data[base] = red[p];
+      imageData.data[base + 1] = green[p];
+      imageData.data[base + 2] = blue[p];
+      imageData.data[base + 3] = fillAlpha[p];
+    }
+  } else if (colorMode === 1) {
+    const gray = channelBuffers[0] || new Uint8Array(pixelCount);
+    for (let p = 0; p < pixelCount; p++) {
+      const v = gray[p];
+      const base = p * 4;
+      imageData.data[base] = v;
+      imageData.data[base + 1] = v;
+      imageData.data[base + 2] = v;
+      imageData.data[base + 3] = fillAlpha[p];
+    }
+  } else if (colorMode === 4) {
+    const c = channelBuffers[0] || new Uint8Array(pixelCount);
+    const m = channelBuffers[1] || new Uint8Array(pixelCount);
+    const y = channelBuffers[2] || new Uint8Array(pixelCount);
+    const k = channelBuffers[3] || new Uint8Array(pixelCount);
+
+    for (let p = 0; p < pixelCount; p++) {
+      const base = p * 4;
+      const cc = c[p];
+      const mm = m[p];
+      const yy = y[p];
+      const kk = k[p];
+      imageData.data[base] = 255 - Math.min(255, cc + kk);
+      imageData.data[base + 1] = 255 - Math.min(255, mm + kk);
+      imageData.data[base + 2] = 255 - Math.min(255, yy + kk);
+      imageData.data[base + 3] = fillAlpha[p];
+    }
+  } else {
+    // Unsupported color mode: draw a placeholder fill.
+    ctx.putImageData(createPlaceholderCanvas(layer.width, layer.height, layer.opacity, layer.id).getContext('2d').getImageData(0, 0, layer.width, layer.height), 0, 0);
+    return { canvas, bytesConsumed };
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+  return { canvas, bytesConsumed };
+}
+
+function decodePSDRowRLE(compressed, width, height) {
+  const output = new Uint8Array(width * height);
+  let readOffset = 0;
+  let writeOffset = 0;
+
+  for (let row = 0; row < height; row++) {
+    while (writeOffset < (row + 1) * width && readOffset < compressed.length) {
+      const code = compressed[readOffset++];
+      if (code >= 0 && code <= 127) {
+        const count = code + 1;
+        output.set(compressed.subarray(readOffset, readOffset + count), writeOffset);
+        readOffset += count;
+        writeOffset += count;
+      } else if (code >= 129 && code <= 255) {
+        const count = 257 - code;
+        const value = compressed[readOffset++];
+        output.fill(value, writeOffset, writeOffset + count);
+        writeOffset += count;
+      }
+      // 128 is a no-op.
+    }
+    if (writeOffset < (row + 1) * width) {
+      writeOffset = (row + 1) * width;
+    }
+  }
+
+  return output;
 }
 
 // PSD Stage Layout & Interactive Controls
