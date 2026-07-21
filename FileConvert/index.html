@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FileConvert</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="logo">FileConvert</div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <h1>Local Document Conversion & Merging Tool</h1>
+      <p>Directly Convert files within the browser.</p>
+    </section>
+
+    <!-- Grid of Conversion Cards inspired by iLovePDF -->
+    <section class="tools-grid">
+      <div class="card active" data-action="md-to-pdf">
+        <div class="icon">📝</div>
+        <h3>MD to PDF</h3>
+        <p>Convert Markdown documents directly into formatted PDF prints.</p>
+      </div>
+
+      <div class="card" data-action="pdf-to-docx">
+        <div class="icon">📄</div>
+        <h3>PDF to Word</h3>
+        <p>Extract raw structured text content into editable document format.</p>
+      </div>
+
+      <div class="card" data-action="pptx-to-pdf">
+        <div class="icon">📊</div>
+        <h3>PowerPoint to PDF</h3>
+        <p>Structure slides into document layout streams.</p>
+      </div>
+
+      <div class="card" data-action="pdf-to-pptx">
+        <div class="icon">🖼️</div>
+        <h3>PDF to PowerPoint</h3>
+        <p>Convert document pages into structured presentation slides.</p>
+      </div>
+    </section>
+
+    <!-- Interactive Conversion Workspace -->
+    <section class="workspace" id="workspace">
+      <h2 id="current-tool-title">Markdown to PDF</h2>
+      
+      <div class="drop-zone" id="drop-zone">
+        <input type="file" id="file-input" hidden />
+        <div class="drop-message">
+          <p>Drag & Drop your file here or <strong>Browse</strong></p>
+          <span id="file-name-display">No file selected</span>
+        </div>
+      </div>
+
+      <div class="action-bar">
+        <button id="convert-btn" class="btn primary" disabled>Process & Convert</button>
+      </div>
+
+      <div id="status-log" class="status-log"></div>
+    </section>
+  </main>
+
+  <script src="FileConvert.js"></script>
+</body>
+</html>
