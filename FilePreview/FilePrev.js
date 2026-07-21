@@ -5,22 +5,63 @@ let psdLayers = []; // Holds independent parsed sub-layer canvases
 // Extension Matcher
 function getFileType(fileName) {
   const ext = fileName.split('.').pop().toLowerCase();
-  switch(ext) {
-    case 'png': case 'jpg': case 'jpeg': case 'gif': 
-    case 'webp': case 'svg': case 'bmp': case 'ico':
+
+  switch (ext) {
+    case 'png':
+    case 'jpg':
+    case 'jpeg':
+    case 'gif':
+    case 'webp':
+    case 'svg':
+    case 'bmp':
+    case 'ico':
       return 'image';
-    case 'psd': return 'psd';
-    case 'mp4': case 'webm': case 'ogg': return 'video';
-    case 'pdf': return 'pdf';
-    case 'csv': return 'csv';
-    case 'md': case 'markdown': return 'markdown';
-    case 'txt': case 'json': case 'xml': case 'log':
+
+    case 'psd':
+      return 'psd';
+
+    case 'mp4':
+    case 'webm':
+    case 'ogg':
+      return 'video';
+
+    case 'mp3':
+    case 'wav':
+    case 'flac':
+    case 'aac':
+    case 'm4a':
+    case 'opus':
+      return 'audio';
+
+    case 'pdf':
+      return 'pdf';
+
+    case 'csv':
+      return 'csv';
+
+    case 'md':
+    case 'markdown':
+      return 'markdown';
+
+    case 'txt':
+    case 'json':
+    case 'xml':
+    case 'log':
       return 'text';
-    case 'docx': case 'pptx': case 'xlsx': case 'odt':
+
+    case 'docx':
+    case 'pptx':
+    case 'xlsx':
+    case 'odt':
       return 'office-xml';
-    case 'doc': case 'xls': case 'ppt':
+
+    case 'doc':
+    case 'xls':
+    case 'ppt':
       return 'office-legacy';
-    default: return 'unsupported';
+    
+    default:
+      return 'unsupported';
   }
 }
 
@@ -98,6 +139,9 @@ function selectFile(index) {
     case 'video':
       renderVideo(fileUrl, stage);
       break;
+    case 'audio':
+      renderAudio(fileUrl, stage);
+      break;
     case 'pdf':
       renderPDF(fileUrl, stage);
       break;
@@ -135,7 +179,331 @@ function renderImage(url, stage) {
 }
 
 function renderVideo(url, stage) {
-  stage.innerHTML = `<video controls src="${url}"></video>`;
+
+    stage.innerHTML = '';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'video-player';
+    wrapper.style.cssText = `
+        display:flex;
+        flex-direction:column;
+        gap:10px;
+        width:100%;
+        height:100%;
+        align-items:center;
+    `;
+
+    const video = document.createElement('video');
+    video.src = url;
+    video.style.cssText = `
+        max-width:100%;
+        max-height:calc(100% - 60px);
+        background:#000;
+    `;
+
+    const controls = document.createElement('div');
+    controls.className = 'video-controls';
+    controls.style.cssText = `
+        display:flex;
+        gap:8px;
+        align-items:center;
+        width:100%;
+    `;
+
+    // Play
+    const playBtn = document.createElement('button');
+    playBtn.textContent = '▶️';
+
+    playBtn.onclick = () => {
+        if(video.paused){
+            video.play();
+            playBtn.textContent='⏸️';
+        }else{
+            video.pause();
+            playBtn.textContent='▶️';
+        }
+    };
+
+    video.onpause=()=>playBtn.textContent='▶️';
+    video.onplay=()=>playBtn.textContent='⏸️';
+
+    // Back
+    const backBtn=document.createElement('button');
+    backBtn.textContent='⏪';
+    backBtn.onclick=()=>video.currentTime-=5;
+
+    // Forward
+    const forwardBtn=document.createElement('button');
+    forwardBtn.textContent='⏩';
+    forwardBtn.onclick=()=>video.currentTime+=5;
+
+    // Seek
+    const seek=document.createElement('input');
+    seek.type='range';
+    seek.min=0;
+    seek.max=100;
+    seek.value=0;
+    seek.style.flex='1';
+
+    seek.oninput=()=>{
+        if(video.duration)
+            video.currentTime=(seek.value/100)*video.duration;
+    };
+
+    video.addEventListener('timeupdate',()=>{
+        if(video.duration)
+            seek.value=(video.currentTime/video.duration)*100;
+    });
+
+    // Mute
+    const muteBtn=document.createElement('button');
+    muteBtn.textContent='🔊';
+
+    muteBtn.onclick=()=>{
+        video.muted=!video.muted;
+        muteBtn.textContent=video.muted?'🔇':'🔊';
+    };
+
+    // Volume
+    const volume=document.createElement('input');
+    volume.type='range';
+    volume.min=0;
+    volume.max=1;
+    volume.step=0.05;
+    volume.value=1;
+
+    volume.oninput=()=>{
+        video.volume=volume.value;
+    };
+
+    // Speed
+    const speed=document.createElement('select');
+
+    [0.5,1,1.5,2].forEach(v=>{
+        const o=document.createElement('option');
+        o.value=v;
+        o.textContent=v+'x';
+        if(v===1)o.selected=true;
+        speed.appendChild(o);
+    });
+
+    speed.onchange=()=>{
+        video.playbackRate=parseFloat(speed.value);
+    };
+
+    // Fullscreen
+    const fs=document.createElement('button');
+    fs.textContent='⛶';
+
+    fs.onclick=()=>{
+        if(!document.fullscreenElement)
+            wrapper.requestFullscreen();
+        else
+            document.exitFullscreen();
+    };
+
+    controls.append(
+        playBtn,
+        backBtn,
+        forwardBtn,
+        seek,
+        muteBtn,
+        volume,
+        speed,
+        fs
+    );
+
+    wrapper.append(video,controls);
+    stage.appendChild(wrapper);
+
+    // Hold for 2x
+    const boost=()=>video.playbackRate=2;
+    const normal=()=>video.playbackRate=parseFloat(speed.value);
+
+    video.addEventListener('mousedown',boost);
+    video.addEventListener('mouseup',normal);
+    video.addEventListener('mouseleave',normal);
+
+    video.addEventListener('touchstart',boost);
+    video.addEventListener('touchend',normal);
+
+    document.onkeydown=(e)=>{
+
+        if(selectedFileIndex===null) return;
+
+        switch(e.code){
+
+            case 'Space':
+                e.preventDefault();
+                playBtn.click();
+                break;
+
+            case 'ArrowRight':
+                video.currentTime+=5;
+                break;
+
+            case 'ArrowLeft':
+                video.currentTime-=5;
+                break;
+
+            case 'KeyF':
+                fs.click();
+                break;
+
+            case 'KeyM':
+                muteBtn.click();
+                break;
+        }
+    };
+}
+
+function renderAudio(url, stage){
+
+    stage.innerHTML='';
+
+    const wrapper=document.createElement('div');
+
+    wrapper.style.cssText=`
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        justify-content:center;
+        gap:20px;
+        width:100%;
+        height:100%;
+    `;
+
+    const icon=document.createElement('div');
+    icon.style.fontSize='80px';
+    icon.textContent='🎵';
+
+    const audio=document.createElement('audio');
+    audio.src=url;
+
+    const controls=document.createElement('div');
+    controls.style.cssText=`
+        display:flex;
+        gap:8px;
+        align-items:center;
+        width:90%;
+    `;
+
+    const play=document.createElement('button');
+    play.textContent='▶️';
+
+    play.onclick=()=>{
+        if(audio.paused){
+            audio.play();
+            play.textContent='⏸️';
+        }else{
+            audio.pause();
+            play.textContent='▶️';
+        }
+    };
+
+    audio.onpause=()=>play.textContent='▶️';
+    audio.onplay=()=>play.textContent='⏸️';
+
+    const back=document.createElement('button');
+    back.textContent='⏪';
+    back.onclick=()=>audio.currentTime-=5;
+
+    const forward=document.createElement('button');
+    forward.textContent='⏩';
+    forward.onclick=()=>audio.currentTime+=5;
+
+    const seek=document.createElement('input');
+    seek.type='range';
+    seek.min=0;
+    seek.max=100;
+    seek.value=0;
+    seek.style.flex='1';
+
+    seek.oninput=()=>{
+        if(audio.duration)
+            audio.currentTime=(seek.value/100)*audio.duration;
+    };
+
+    audio.addEventListener('timeupdate',()=>{
+        if(audio.duration)
+            seek.value=(audio.currentTime/audio.duration)*100;
+    });
+
+    const mute=document.createElement('button');
+    mute.textContent='🔊';
+
+    mute.onclick=()=>{
+        audio.muted=!audio.muted;
+        mute.textContent=audio.muted?'🔇':'🔊';
+    };
+
+    const volume=document.createElement('input');
+    volume.type='range';
+    volume.min=0;
+    volume.max=1;
+    volume.step=0.05;
+    volume.value=1;
+
+    volume.oninput=()=>{
+        audio.volume=volume.value;
+    };
+
+    const speed=document.createElement('select');
+
+    [0.5,1,1.5,2].forEach(v=>{
+        const o=document.createElement('option');
+        o.value=v;
+        o.textContent=v+'x';
+        if(v===1)o.selected=true;
+        speed.appendChild(o);
+    });
+
+    speed.onchange=()=>{
+        audio.playbackRate=parseFloat(speed.value);
+    };
+
+    controls.append(
+        play,
+        back,
+        forward,
+        seek,
+        mute,
+        volume,
+        speed
+    );
+
+    wrapper.append(
+        icon,
+        audio,
+        controls
+    );
+
+    stage.appendChild(wrapper);
+
+    document.onkeydown=(e)=>{
+
+        if(selectedFileIndex===null) return;
+
+        switch(e.code){
+
+            case 'Space':
+                e.preventDefault();
+                play.click();
+                break;
+
+            case 'ArrowRight':
+                audio.currentTime+=5;
+                break;
+
+            case 'ArrowLeft':
+                audio.currentTime-=5;
+                break;
+
+            case 'KeyM':
+                mute.click();
+                break;
+        }
+    };
 }
 
 function renderPDF(url, stage) {
