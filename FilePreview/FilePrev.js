@@ -142,11 +142,40 @@ function renderPDF(url, stage) {
   stage.innerHTML = `<iframe class="pdf-frame" src="${url}"></iframe>`;
 }
 
+// Editable Plain Text Reader
 function renderPlainText(file, stage) {
   const reader = new FileReader();
   reader.onload = (e) => {
-    const text = escapeHtml(e.target.result);
-    stage.innerHTML = `<pre style="width: 100%; height: 100%; overflow: auto; background: var(--bg-secondary); padding: 16px; border-radius: 6px; border: 1px solid var(--border-color); font-family: monospace; font-size: 0.85rem; color: var(--text-main); white-space: pre-wrap;">${text}</pre>`;
+    const rawText = e.target.result;
+    
+    stage.innerHTML = `
+      <div style="display: flex; flex-direction: column; width: 100%; height: 100%; gap: 12px;">
+        <div style="display: flex; justify-content: flex-end;">
+          <button id="saveTxtBtn" class="btn btn-primary" style="padding: 6px 14px; font-size: 0.8rem;">
+            💾 Save Changes
+          </button>
+        </div>
+        <textarea id="txtEditor" style="
+          flex: 1; 
+          width: 100%; 
+          background: var(--bg-secondary); 
+          color: var(--text-main); 
+          border: 1px solid var(--border-color); 
+          border-radius: 6px; 
+          padding: 16px; 
+          font-family: monospace; 
+          font-size: 0.85rem; 
+          resize: none; 
+          outline: none;
+          line-height: 1.5;
+        ">${escapeHtml(rawText)}</textarea>
+      </div>
+    `;
+
+    document.getElementById('saveTxtBtn').onclick = () => {
+      const editedContent = document.getElementById('txtEditor').value;
+      downloadFile(editedContent, file.name, 'text/plain');
+    };
   };
   reader.readAsText(file);
 }
@@ -176,14 +205,65 @@ function renderCSV(file, stage) {
   reader.readAsText(file);
 }
 
+// Editable Split-Pane Markdown Reader
 function renderMarkdown(file, stage) {
   const reader = new FileReader();
   reader.onload = (e) => {
-    const text = e.target.result;
-    const htmlContent = parseMarkdown(text);
-    stage.innerHTML = `<div class="markdown-container">${htmlContent}</div>`;
+    const rawText = e.target.result;
+    
+    stage.innerHTML = `
+      <div style="display: flex; flex-direction: column; width: 100%; height: 100%; gap: 12px;">
+        <div style="display: flex; justify-content: flex-end;">
+          <button id="saveMdBtn" class="btn btn-primary" style="padding: 6px 14px; font-size: 0.8rem;">
+            💾 Save Changes
+          </button>
+        </div>
+        <div style="display: flex; flex: 1; gap: 16px; height: calc(100% - 45px); overflow: hidden;">
+          <textarea id="mdInput" style="
+            flex: 1; 
+            height: 100%; 
+            background: var(--bg-secondary); 
+            color: var(--text-main); 
+            border: 1px solid var(--border-color); 
+            border-radius: 6px; 
+            padding: 16px; 
+            font-family: monospace; 
+            font-size: 0.85rem; 
+            resize: none; 
+            outline: none;
+            line-height: 1.5;
+          ">${escapeHtml(rawText)}</textarea>
+          
+          <div id="mdPreview" class="markdown-container" style="flex: 1; height: 100%; overflow-y: auto;">
+            ${parseMarkdown(rawText)}
+          </div>
+        </div>
+      </div>
+    `;
+
+    const input = document.getElementById('mdInput');
+    const preview = document.getElementById('mdPreview');
+
+    // Live preview updating on typing
+    input.addEventListener('input', () => {
+      preview.innerHTML = parseMarkdown(input.value);
+    });
+
+    document.getElementById('saveMdBtn').onclick = () => {
+      downloadFile(input.value, file.name, 'text/markdown');
+    };
   };
   reader.readAsText(file);
+}
+
+// Helper to trigger file downloads
+function downloadFile(content, fileName, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 // Office OpenXML Reader (docx, pptx, xlsx using local/global JSZip)
@@ -418,7 +498,6 @@ function parsePSDFile(buffer) {
       layers.push(layer);
     }
 
-    // Do not parse global layer mask info for previewing sub-layers.
     offset = layerSectionEnd;
   }
 
@@ -492,7 +571,6 @@ function decodePSDLayerImage(buffer, startOffset, layer, depth, colorMode) {
       }
       offset = rleEnd;
     } else {
-      // Unsupported compression path: skip the channel bytes and keep blank data.
       offset += channelBytes;
     }
 
@@ -550,7 +628,6 @@ function decodePSDLayerImage(buffer, startOffset, layer, depth, colorMode) {
       imageData.data[base + 3] = fillAlpha[p];
     }
   } else {
-    // Unsupported color mode: draw a placeholder fill.
     ctx.putImageData(createPlaceholderCanvas(layer.width, layer.height, layer.opacity, layer.id).getContext('2d').getImageData(0, 0, layer.width, layer.height), 0, 0);
     return { canvas, bytesConsumed };
   }
@@ -578,7 +655,6 @@ function decodePSDRowRLE(compressed, width, height) {
         output.fill(value, writeOffset, writeOffset + count);
         writeOffset += count;
       }
-      // 128 is a no-op.
     }
     if (writeOffset < (row + 1) * width) {
       writeOffset = (row + 1) * width;
@@ -615,7 +691,9 @@ function renderPSDLayout(stage, width, height) {
   title.textContent = 'PSD Layers';
   layersPanel.appendChild(title);
 
-  psdLayers.forEach((layer) => {
+  // Iterate in reverse for the sidebar UI so top-most layers appear at the top of the UI list
+  for (let i = psdLayers.length - 1; i >= 0; i--) {
+    const layer = psdLayers[i];
     const layerRow = document.createElement('label');
     layerRow.style.cssText = 'display: flex; align-items: center; gap: 8px; font-size: 0.8rem; cursor: pointer; padding: 8px; border-radius: 4px; background: var(--bg-tertiary); user-select: none;';
     
@@ -634,7 +712,7 @@ function renderPSDLayout(stage, width, height) {
     layerRow.appendChild(checkbox);
     layerRow.appendChild(label);
     layersPanel.appendChild(layerRow);
-  });
+  }
 
   container.appendChild(canvasWrapper);
   container.appendChild(layersPanel);
