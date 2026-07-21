@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Client-Side File Previewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header>
+    <div class="logo">
+      <span>📂</span> Client-Side File Previewer
+    </div>
+    <div class="upload-controls">
+      <button class="btn btn-primary" onclick="document.getElementById('singleInput').click()">
+        📄 Upload Single File
+      </button>
+      <button class="btn" onclick="document.getElementById('folderInput').click()">
+        📁 Upload Folder
+      </button>
+      <input type="file" id="singleInput" onchange="handleSingleFile(event)">
+      <input type="file" id="folderInput" webkitdirectory directory multiple onchange="handleFolderFiles(event)">
+    </div>
+  </header>
+
+  <div class="app-body">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-header">Files List</div>
+      <div class="file-tree" id="fileTree">
+        <div style="padding: 12px; font-size: 0.8rem; color: var(--text-muted);">No files loaded.</div>
+      </div>
+    </div>
+
+    <!-- Viewport -->
+    <div class="viewport">
+      <div class="viewport-header" id="viewportHeader">
+        <div class="file-info">
+          <span class="file-name" id="selectedFileName">No File Selected</span>
+          <span class="file-meta" id="selectedFileMeta"></span>
+        </div>
+      </div>
+      <div class="preview-stage" id="previewStage">
+        <div class="placeholder">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+          </svg>
+          <p>Select a file or upload a folder to preview content</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="FilePrev.js"></script>
+</body>
+</html>
