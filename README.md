@@ -1,8 +1,6 @@
 # Sigma Webapps
 A client side local hosted tool where you could use and bring anywhere!
 
----
-
 ## Overview
 This project is a collection of self-contained, client-side web tools designed to run entirely offline and locally via a standard web browser. The goal is to provide a unified hub for personal file management, encryption, conversion, and text extraction without requiring any external hosting or third-party dependencies.
 
