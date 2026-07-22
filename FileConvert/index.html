@@ -1,70 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FileConvert</title>
-  <link rel="stylesheet" href="styles.css">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FileConvert — Local Document Conversion &amp; Merging Tool</title>
+<link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
-  <header class="navbar">
-    <div class="logo">FileConvert</div>
-  </header>
+<div class="topbar">
+  <div class="brand">File<span>Convert</span></div>
+  <div class="topbar-note">100% local &middot; runs entirely in your browser &middot; no uploads</div>
+</div>
 
-  <main class="container">
-    <section class="hero">
-      <h1>Local Document Conversion & Merging Tool</h1>
-      <p>Directly Convert files within the browser.</p>
-    </section>
+<main>
+  <div class="page-header">
+    <h1>Local Document Conversion &amp; Merging Tool</h1>
+    <p>Directly convert files within the browser. Nothing ever leaves this machine.</p>
+  </div>
 
-    <!-- Grid of Conversion Cards inspired by iLovePDF -->
-    <section class="tools-grid">
-      <div class="card active" data-action="md-to-pdf">
-        <div class="icon">📝</div>
-        <h3>MD to PDF</h3>
-        <p>Convert Markdown documents directly into formatted PDF prints.</p>
-      </div>
+  <div class="tool-grid" id="toolGrid">
+    <!-- populated by app.js from TOOL_DEFINITIONS -->
+  </div>
 
-      <div class="card" data-action="pdf-to-docx">
-        <div class="icon">📄</div>
-        <h3>PDF to Word</h3>
-        <p>Extract raw structured text content into editable document format.</p>
-      </div>
+  <div class="workspace hidden" id="workspace">
+    <h2 id="workspaceTitle">—</h2>
+    <p class="workspace-sub" id="workspaceSub"></p>
 
-      <div class="card" data-action="pptx-to-pdf">
-        <div class="icon">📊</div>
-        <h3>PowerPoint to PDF</h3>
-        <p>Structure slides into document layout streams.</p>
-      </div>
+    <div class="dropzone" id="dropzone">
+      <p>Drag &amp; Drop your file(s) here or <span class="browse-link" id="browseLink">Browse</span></p>
+      <p class="hint" id="dropHint">No file selected</p>
+      <input type="file" id="fileInput" class="hidden" multiple />
+    </div>
 
-      <div class="card" data-action="pdf-to-pptx">
-        <div class="icon">🖼️</div>
-        <h3>PDF to PowerPoint</h3>
-        <p>Convert document pages into structured presentation slides.</p>
-      </div>
-    </section>
+    <div class="file-list" id="fileList"></div>
 
-    <!-- Interactive Conversion Workspace -->
-    <section class="workspace" id="workspace">
-      <h2 id="current-tool-title">Markdown to PDF</h2>
-      
-      <div class="drop-zone" id="drop-zone">
-        <input type="file" id="file-input" hidden />
-        <div class="drop-message">
-          <p>Drag & Drop your file here or <strong>Browse</strong></p>
-          <span id="file-name-display">No file selected</span>
-        </div>
-      </div>
+    <div class="options" id="optionsArea"></div>
 
-      <div class="action-bar">
-        <button id="convert-btn" class="btn primary" disabled>Process & Convert</button>
-      </div>
+    <div class="fidelity-notice hidden" id="fidelityNotice"></div>
 
-      <div id="status-log" class="status-log"></div>
-    </section>
-  </main>
+    <div class="actions">
+      <button class="secondary hidden" id="clearBtn">Clear</button>
+      <button class="primary" id="convertBtn" disabled>Process &amp; Convert</button>
+    </div>
 
-  <script src="FileConvert.js"></script>
+    <div class="status-area hidden" id="statusArea">
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="status-line" id="statusLine">Preparing…</div>
+    </div>
+
+    <div class="results" id="resultsArea"></div>
+  </div>
+</main>
+
+<footer>FileConvert prototype &middot; conversions run locally via bundled open-source libraries (pdf-lib, pdf.js, mammoth, pptxgenjs, xlsx, jszip)</footer>
+
+<!-- ===== Vendor libraries (all local, no CDN, no network calls) ===== -->
+<script src="vendor/pdf-lib.min.js"></script>
+<script src="vendor/pdf.min.js"></script>
+<script src="vendor/jszip.min.js"></script>
+<script src="vendor/mammoth.browser.min.js"></script>
+<script src="vendor/pptxgen.min.js"></script>
+<script src="vendor/xlsx.full.min.js"></script>
+
+<!-- ===== Conversion engine modules ===== -->
+<script src="converters/utils.js"></script>
+<script src="converters/pdfMerge.js"></script>
+<script src="converters/pdfSplit.js"></script>
+<script src="converters/imagePdf.js"></script>
+<script src="converters/wordPdf.js"></script>
+<script src="converters/pptPdf.js"></script>
+<script src="converters/excelPdf.js"></script>
+
+<!-- ===== App shell / UI wiring ===== -->
+<script src="app.js"></script>
 </body>
 </html>

@@ -5,23 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LocalOCR</title>
   <link rel="stylesheet" href="style.css" />
-  <!-- Tesseract.js for pure client-side OCR 
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-  -->
+  <!-- Tesseract.js for pure client-side OCR
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script> -->
   <script src="tesseract.min.js"></script>
-  
-  <!-- PDF.js for rendering PDF pages to canvas for OCR 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  -->
+  <!-- PDF.js for rendering PDF pages to canvas for OCR
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script> -->
   <script src="pdf.min.js"></script>
-  
 </head>
 <body>
   <div class="app-container">
     <!-- Header -->
     <header class="header">
       <h1>Image to Text Converter</h1>
-      <p>LocalOCR</p>
+      <p>Local text extractor, this version may have scan errors, for better results try: <a href="https://www.imagetotext.info/" target="_blank">This</a></p> 
     </header>
 
     <!-- Upload Area -->
@@ -42,11 +38,12 @@
           </button>
           <input type="file" id="file-input" multiple hidden />
         </div>
-        <!--<span class="disclaimer">*Your privacy is protected! No data leaves your browser.</span>-->
+        <span class="disclaimer">*This is only good for screenshots.</span>
       </div>
+
     </div>
 
-
+    <!-- Main Workspace (Dark Layout inspired by Reference 3) -->
     <div class="workspace-container hidden" id="workspace">
       <!-- Sidebar / File List -->
       <aside class="sidebar">
