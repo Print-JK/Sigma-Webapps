@@ -30,7 +30,7 @@ SIGMA-WEBAPPS/
 │   ├── FilePrev.js
 │   ├── index.html
 │   ├── jszip.min.js
-│   └── styles.css
+│   └── style.css
 │
 ├── LocalOCR/
 │   ├── index.html
@@ -46,7 +46,7 @@ SIGMA-WEBAPPS/
 ├── PassMan/
 │   ├── Index.html
 │   ├── PassMan.js
-│   └── styles.css
+│   └── style.css
 │
 ├── ZIPencrypt/
 │   └── index.html
