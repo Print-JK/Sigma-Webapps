@@ -82,16 +82,24 @@ Click the cards provided on the Mainpage to access the specific tools.
 The application currently encompasses the following functional modules:
 
 1. PassMan
+   
 Function: Securely encrypt and decrypt password data stored in CSV format using locally generated keys.
 Capability: Local key file generation and secure local file interaction via browser APIs.
-2. ZIPEncrypt
+
+3. ZIPEncrypt
+   
 Function: Client-side encryption/decryption of ZIP archives.
 Capability: Preview functionality for embedded media (PDF, PNG, GIF, PSD, MP4, most files that is supported by FilePreview) upon decryption.
-3. FilePreview
+
+4. FilePreview
+   
 Function: A single interface to load and preview various file types directly in the browser.
 Supported Formats: PDF, PNG, JPG, GIF, PSD (Yes PSD too), MP4, MP3, CSV, and Markdown (MD).
-4. FileConvert (still underdevlopment)
-Function: Perform format conversions or merging entirely within the local browser environment, basically a knock-off local version of IlovePDF
+
+5. FileConvert (not ideal, only use conversions for low-stakes files and personal viewing)
+
+Function: Perform format conversions or merging entirely within the local browser environment, basically a knock-off of IlovePDF
+
 Conversions includes:
 - Merging PDF files
 - Spliting PDF files
@@ -101,9 +109,11 @@ Conversions includes:
 - JPG ↔ PDF
 - PNG ↔ PDF
 
-5. LocalOCR 
+5. LocalOCR (not ideal, only use for screenshotted images and check for errors)
+   
 Function: Upload an image to extract text using a locally embedded Machine Learning model.
 Capability: Extraction of both standard digital text and handwritten text from the uploaded image.
+
 
 ## Important Operational Notes (Constraints & Risks)
 Local Execution Mandate: This application is not intended for online hosting. All file operations must be strictly confined to the local machine environment, as it may contain vulnerable code.
