@@ -179,7 +179,7 @@
   }
 
   // -------------------------------------------------------------------
-  // Missing-library check — if any vendor/*.js or converters/*.js file
+  // Missing-library check — if any lib/*.js or converters/*.js file
   // didn't actually load (wrong folder structure, a file left behind when
   // copying, a 404 on a case-sensitive server, etc.), every tool that
   // depends on it fails silently with no visible cause. Name exactly
@@ -187,14 +187,14 @@
   // -------------------------------------------------------------------
   (function checkRequiredLibraries() {
     const required = [
-      ["PDFLib", "vendor/pdf-lib.min.js"],
-      ["pdfjsLib", "vendor/pdf.min.js"],
-      ["JSZip", "vendor/jszip.min.js"],
-      ["mammoth", "vendor/mammoth.browser.min.js"],
-      ["PptxGenJS", "vendor/pptxgen.min.js"],
-      ["XLSX", "vendor/xlsx.full.min.js"],
-      ["fontkit", "vendor/fontkit.umd.min.js"],
-      ["FONT_DATA", "vendor/fonts-data.js"],
+      ["PDFLib", "../lib/pdf-lib.min.js"],
+      ["pdfjsLib", "../lib/pdf.min.js"],
+      ["JSZip", "../lib/jszip.min.js"],
+      ["mammoth", "../lib/mammoth.browser.min.js"],
+      ["PptxGenJS", "../lib/pptxgen.min.js"],
+      ["XLSX", "../lib/xlsx.full.min.js"],
+      ["fontkit", "../lib/fontkit.umd.min.js"],
+      ["FONT_DATA", "../lib/fonts-data.js"],
       ["ConvUtils", "converters/utils.js"],
       ["Converters", "converters/*.js"],
     ];
@@ -204,7 +204,7 @@
       protocolBanner.innerHTML =
         `⚠ Missing required file(s), so conversions will silently fail: ` +
         missing.map(([, path]) => `<code>${path}</code>`).join(", ") +
-        `. Make sure the whole project folder (including <code>vendor/</code> and ` +
+        `. Make sure the whole project folder (including <code>lib/</code> and ` +
         `<code>converters/</code>) is next to <code>index.html</code>, then reload.`;
       console.error("FileConvert: missing required globals ->", missing.map((m) => m[0]));
     }

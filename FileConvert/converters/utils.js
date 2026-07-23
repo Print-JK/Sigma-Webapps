@@ -8,7 +8,7 @@
 
   // pdf.js needs an explicit local worker script (no CDN).
   if (global.pdfjsLib) {
-    global.pdfjsLib.GlobalWorkerOptions.workerSrc = "vendor/pdf.worker.min.js";
+    global.pdfjsLib.GlobalWorkerOptions.workerSrc = "../lib/pdf.worker.min.js";
   }
 
   function readFileAsArrayBuffer(file) {
@@ -207,7 +207,7 @@
   function getFontBytes(key) {
     if (!decodedFontCache[key]) {
       if (!global.FONT_DATA || !global.FONT_DATA[key]) {
-        throw new Error(`Font data "${key}" isn't loaded — is vendor/fonts-data.js present and included in index.html?`);
+        throw new Error(`Font data "${key}" isn't loaded — is ../lib/fonts-data.js present and included in index.html?`);
       }
       decodedFontCache[key] = base64ToUint8Array(global.FONT_DATA[key]);
     }

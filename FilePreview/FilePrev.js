@@ -640,7 +640,7 @@ function renderOfficeXML(file, stage) {
   reader.onload = async (e) => {
     try {
       if (typeof JSZip === 'undefined') {
-        stage.innerHTML = '<div class="placeholder"><p>Error: JSZip library not loaded. Make sure jszip.min.js is included in your index.html.</p></div>';
+        stage.innerHTML = '<div class="placeholder"><p>Error: JSZip library not loaded. Make sure ../lib/jszip.min.js is included in your index.html.</p></div>';
         return;
       }
 

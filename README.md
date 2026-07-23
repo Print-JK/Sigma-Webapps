@@ -26,19 +26,27 @@ SIGMA-WEBAPPS/
 │   ├── index.html
 │   └── styles.css
 │
+├── lib/
+│   ├── fontkit.umd.min.js
+│   ├── fonts-data.js
+│   ├── jszip.min.js
+│   ├── mammoth.browser.min.js
+│   ├── pdf-lib.min.js
+│   ├── pdf.min.js
+│   ├── pdf.worker.min.js
+│   ├── pptxgen.min.js
+│   ├── tesseract.min.js
+│   └── xlsx.full.min.js
+│
 ├── FilePreview/
 │   ├── FilePrev.js
 │   ├── index.html
-│   ├── jszip.min.js
 │   └── style.css
 │
 ├── LocalOCR/
 │   ├── index.html
 │   ├── OCR.js
-│   ├── pdf.min.js
-│   ├── pdf.worker.min.js
-│   ├── style.css
-│   └── tesseract.min.js
+│   └── style.css
 │
 ├── Main/
 │   └── index.html
