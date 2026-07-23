@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>FileConvert — Local Document Conversion &amp; Merging Tool</title>
+<title>FileConvert</title>
 <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -13,9 +13,15 @@
   <div class="topbar-note">100% local &middot; runs entirely in your browser &middot; no uploads</div>
 </div>
 
+<div class="protocol-banner hidden" id="protocolBanner">
+  ⚠ You're opening this as a local <code>file://</code> page. Some tools (anything that reads inside a
+  PDF) need a real local server to work in this browser. Run <code>python3 -m http.server 8000</code> in
+  this folder and open <code>http://localhost:8000</code> instead.
+</div>
+
 <main>
   <div class="page-header">
-    <h1>Local Document Conversion &amp; Merging Tool</h1>
+    <h1>Local Document Conversion & Merging Tool</h1>
     <p>Directly convert files within the browser. Nothing ever leaves this machine.</p>
   </div>
 
@@ -24,32 +30,48 @@
   </div>
 
   <div class="workspace hidden" id="workspace">
-    <h2 id="workspaceTitle">—</h2>
-    <p class="workspace-sub" id="workspaceSub"></p>
-
-    <div class="dropzone" id="dropzone">
-      <p>Drag &amp; Drop your file(s) here or <span class="browse-link" id="browseLink">Browse</span></p>
-      <p class="hint" id="dropHint">No file selected</p>
-      <input type="file" id="fileInput" class="hidden" multiple />
+    <div class="workspace-header">
+      <h2 id="workspaceTitle">—</h2>
+      <p class="workspace-sub" id="workspaceSub"></p>
+      <div class="fidelity-notice hidden" id="fidelityNotice"></div>
     </div>
 
-    <div class="file-list" id="fileList"></div>
+    <div class="workspace-body">
+      <!-- ============ Left: uploaded files list ============ -->
+      <div class="workspace-sidebar">
+        <div class="dropzone compact" id="dropzone">
+          <p>Drag &amp; Drop or <span class="browse-link" id="browseLink">Browse</span></p>
+          <input type="file" id="fileInput" class="hidden" multiple />
+        </div>
+        <div class="sidebar-label">FILES <span id="fileCountLabel"></span></div>
+        <div class="file-list" id="fileList"></div>
+        <button class="secondary hidden" id="clearBtn">Clear all</button>
+      </div>
 
-    <div class="options" id="optionsArea"></div>
+      <!-- ============ Right: preview + options + actions ============ -->
+      <div class="workspace-main">
+        <div class="preview-header" id="previewHeader">
+          <span id="previewName">No file selected</span>
+          <span class="preview-meta" id="previewMeta"></span>
+        </div>
+        <div class="preview-body" id="previewBody">
+          <p class="preview-empty">Select a file on the left to preview it here.</p>
+        </div>
 
-    <div class="fidelity-notice hidden" id="fidelityNotice"></div>
+        <div class="options" id="optionsArea"></div>
 
-    <div class="actions">
-      <button class="secondary hidden" id="clearBtn">Clear</button>
-      <button class="primary" id="convertBtn" disabled>Process &amp; Convert</button>
+        <div class="actions">
+          <button class="primary" id="convertBtn" disabled>Process &amp; Convert</button>
+        </div>
+
+        <div class="status-area hidden" id="statusArea">
+          <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+          <div class="status-line" id="statusLine">Preparing…</div>
+        </div>
+
+        <div class="results" id="resultsArea"></div>
+      </div>
     </div>
-
-    <div class="status-area hidden" id="statusArea">
-      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
-      <div class="status-line" id="statusLine">Preparing…</div>
-    </div>
-
-    <div class="results" id="resultsArea"></div>
   </div>
 </main>
 
@@ -62,6 +84,8 @@
 <script src="vendor/mammoth.browser.min.js"></script>
 <script src="vendor/pptxgen.min.js"></script>
 <script src="vendor/xlsx.full.min.js"></script>
+<script src="vendor/fontkit.umd.min.js"></script>
+<script src="vendor/fonts-data.js"></script>
 
 <!-- ===== Conversion engine modules ===== -->
 <script src="converters/utils.js"></script>

@@ -14,7 +14,7 @@
  */
 (function (global) {
   "use strict";
-  const { readFileAsArrayBuffer, baseName } = window.ConvUtils;
+  const { readFileAsArrayBuffer, baseName, stripInvisibleChars, loadUnicodeFonts } = window.ConvUtils;
 
   // ---------------------------------------------------------------------
   // PDF -> Excel
@@ -88,14 +88,13 @@
   // Excel -> PDF
   // ---------------------------------------------------------------------
   async function excelToPdf(files, options, onProgress) {
-    const { PDFDocument, StandardFonts, rgb } = PDFLib;
+    const { PDFDocument, rgb } = PDFLib;
     const file = files[0];
     const bytes = await readFileAsArrayBuffer(file);
     const workbook = XLSX.read(bytes, { type: "array" });
 
     const pdfDoc = await PDFDocument.create();
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const headerFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const { font, boldFont: headerFont } = await loadUnicodeFonts(pdfDoc);
 
     const pageW = 792, pageH = 612, margin = 36; // US Letter landscape — a bit more room for columns
     const rowHeight = 20;
@@ -116,7 +115,7 @@
 
       let page = pdfDoc.addPage([pageW, pageH]);
       let y = pageH - margin;
-      page.drawText(sheetName, { x: margin, y, size: 14, font: headerFont, color: rgb(0.1, 0.1, 0.12) });
+      page.drawText(stripInvisibleChars(sheetName), { x: margin, y, size: 14, font: headerFont, color: rgb(0.1, 0.1, 0.12) });
       y -= 28;
 
       for (let r = 0; r < grid.length; r++) {
@@ -127,7 +126,7 @@
         const row = grid[r];
         const isHeader = r === 0;
         for (let c = 0; c < colCount; c++) {
-          const text = (row[c] ?? "").toString();
+          const text = stripInvisibleChars((row[c] ?? "").toString());
           if (!text) continue;
           const x = margin + c * colWidth;
           const truncated = truncateToWidth(text, isHeader ? headerFont : font, fontSize, colWidth - 6);

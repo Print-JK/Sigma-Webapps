@@ -17,6 +17,7 @@
       reorderable: true,
       fidelity: "high",
       fn: "pdfMerge",
+      expectedKinds: ["pdf"],
     },
     {
       id: "split-pdf",
@@ -27,6 +28,7 @@
       multiple: false,
       fidelity: "high",
       fn: "pdfSplit",
+      expectedKinds: ["pdf"],
       renderOptions: renderSplitOptions,
     },
     {
@@ -39,6 +41,7 @@
       reorderable: true,
       fidelity: "high",
       fn: "imagesToPdf",
+      expectedKinds: ["png", "jpg"],
     },
     {
       id: "pdf-to-images",
@@ -49,67 +52,74 @@
       multiple: false,
       fidelity: "high",
       fn: "pdfToImages",
+      expectedKinds: ["pdf"],
       renderOptions: renderImageFormatOptions,
     },
     {
       id: "word-to-pdf",
       icon: "📄",
       title: "Word to PDF",
-      description: "Convert a .docx document to PDF, preserving text, headings and lists.",
+      description: "[Experimental] Convert a .docx document to PDF, preserving text, headings and lists.",
       accept: ".docx",
       multiple: false,
       fidelity: "medium",
       fn: "wordToPdf",
+      expectedKinds: ["docx"],
     },
     {
       id: "pdf-to-word",
       icon: "📝",
       title: "PDF to Word",
-      description: "Extract PDF text into an editable .docx document.",
+      description: "[Experimental] Extract PDF text into an editable .docx document.",
       accept: ".pdf",
       multiple: false,
       fidelity: "low",
       fn: "pdfToWord",
+      expectedKinds: ["pdf"],
     },
     {
       id: "ppt-to-pdf",
       icon: "📽️",
       title: "PowerPoint to PDF",
-      description: "Flatten a .pptx deck's text and images onto PDF pages.",
+      description: "[Experimental] Flatten a .pptx deck's text and images onto PDF pages.",
       accept: ".pptx",
       multiple: false,
       fidelity: "low",
       fn: "pptToPdf",
+      expectedKinds: ["pptx"],
     },
     {
       id: "pdf-to-ppt",
       icon: "📊",
       title: "PDF to PowerPoint",
-      description: "Place each PDF page as a full-page image on its own slide.",
+      description: "[Experimental] Place each PDF page as a full-page image on its own slide.",
       accept: ".pdf",
       multiple: false,
       fidelity: "medium",
       fn: "pdfToPpt",
+      expectedKinds: ["pdf"],
     },
     {
       id: "excel-to-pdf",
       icon: "📈",
       title: "Excel to PDF",
-      description: "Render spreadsheet rows and columns as a ruled table in a PDF.",
+      description: "[Experimental] Render spreadsheet rows and columns as a ruled table in a PDF.",
       accept: ".xlsx,.xls",
       multiple: false,
       fidelity: "medium",
       fn: "excelToPdf",
+      expectedKinds: ["xlsx"],
     },
     {
       id: "pdf-to-excel",
       icon: "📉",
       title: "PDF to Excel",
-      description: "Infer a table from PDF text positions and export it as .xlsx.",
+      description: "[Experimental] Infer a table from PDF text positions and export it as .xlsx.",
       accept: ".pdf",
       multiple: false,
       fidelity: "low",
       fn: "pdfToExcel",
+      expectedKinds: ["pdf"],
     },
   ];
 
@@ -129,28 +139,76 @@
   // State
   // -------------------------------------------------------------------
   let activeTool = null;
-  let selectedFiles = []; // File[]
+  // Each entry: { file, id, kind: 'pending'|<detected kind>, valid, pageCount, thumbnailUrl }
+  let entries = [];
+  let selectedEntryId = null;
+  let entrySeq = 0;
 
   // -------------------------------------------------------------------
   // DOM refs
   // -------------------------------------------------------------------
+  const protocolBanner = document.getElementById("protocolBanner");
   const toolGrid = document.getElementById("toolGrid");
   const workspace = document.getElementById("workspace");
   const workspaceTitle = document.getElementById("workspaceTitle");
   const workspaceSub = document.getElementById("workspaceSub");
   const dropzone = document.getElementById("dropzone");
-  const dropHint = document.getElementById("dropHint");
   const browseLink = document.getElementById("browseLink");
   const fileInput = document.getElementById("fileInput");
+  const fileCountLabel = document.getElementById("fileCountLabel");
   const fileListEl = document.getElementById("fileList");
+  const clearBtn = document.getElementById("clearBtn");
+  const previewName = document.getElementById("previewName");
+  const previewMeta = document.getElementById("previewMeta");
+  const previewBody = document.getElementById("previewBody");
   const optionsArea = document.getElementById("optionsArea");
   const fidelityNotice = document.getElementById("fidelityNotice");
-  const clearBtn = document.getElementById("clearBtn");
   const convertBtn = document.getElementById("convertBtn");
   const statusArea = document.getElementById("statusArea");
   const progressFill = document.getElementById("progressFill");
   const statusLine = document.getElementById("statusLine");
   const resultsArea = document.getElementById("resultsArea");
+
+  // -------------------------------------------------------------------
+  // file:// warning — pdf.js's worker (and some fetches) can silently
+  // fail under the file:// origin in Chromium-based browsers. Surface it
+  // up front instead of letting a tool look "broken" for no visible reason.
+  // -------------------------------------------------------------------
+  if (window.location.protocol === "file:") {
+    protocolBanner.classList.remove("hidden");
+  }
+
+  // -------------------------------------------------------------------
+  // Missing-library check — if any vendor/*.js or converters/*.js file
+  // didn't actually load (wrong folder structure, a file left behind when
+  // copying, a 404 on a case-sensitive server, etc.), every tool that
+  // depends on it fails silently with no visible cause. Name exactly
+  // what's missing instead of leaving the UI looking inert.
+  // -------------------------------------------------------------------
+  (function checkRequiredLibraries() {
+    const required = [
+      ["PDFLib", "vendor/pdf-lib.min.js"],
+      ["pdfjsLib", "vendor/pdf.min.js"],
+      ["JSZip", "vendor/jszip.min.js"],
+      ["mammoth", "vendor/mammoth.browser.min.js"],
+      ["PptxGenJS", "vendor/pptxgen.min.js"],
+      ["XLSX", "vendor/xlsx.full.min.js"],
+      ["fontkit", "vendor/fontkit.umd.min.js"],
+      ["FONT_DATA", "vendor/fonts-data.js"],
+      ["ConvUtils", "converters/utils.js"],
+      ["Converters", "converters/*.js"],
+    ];
+    const missing = required.filter(([globalName]) => typeof window[globalName] === "undefined");
+    if (missing.length > 0) {
+      protocolBanner.classList.remove("hidden");
+      protocolBanner.innerHTML =
+        `⚠ Missing required file(s), so conversions will silently fail: ` +
+        missing.map(([, path]) => `<code>${path}</code>`).join(", ") +
+        `. Make sure the whole project folder (including <code>vendor/</code> and ` +
+        `<code>converters/</code>) is next to <code>index.html</code>, then reload.`;
+      console.error("FileConvert: missing required globals ->", missing.map((m) => m[0]));
+    }
+  })();
 
   // -------------------------------------------------------------------
   // Tool grid
@@ -180,7 +238,8 @@
       card.classList.toggle("active", card.dataset.toolId === toolId);
     });
 
-    selectedFiles = [];
+    entries = [];
+    selectedEntryId = null;
     resultsArea.innerHTML = "";
     statusArea.classList.add("hidden");
     fileInput.accept = activeTool.accept;
@@ -198,18 +257,26 @@
     }
 
     renderFileList();
+    renderPreview();
     renderOptions();
     updateConvertButton();
-    workspace.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    // scrollIntoView isn't implemented in every embedding context — guard it
+    // so a missing method can't abort tool selection (this previously threw
+    // and made the panel look unresponsive in some environments).
+    if (typeof workspace.scrollIntoView === "function") {
+      workspace.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   }
 
   // -------------------------------------------------------------------
   // Dropzone / file input
   // -------------------------------------------------------------------
-  browseLink.addEventListener("click", () => fileInput.click());
-  dropzone.addEventListener("click", (e) => {
-    if (e.target !== browseLink) fileInput.click();
+  browseLink.addEventListener("click", (e) => {
+    e.stopPropagation();
+    fileInput.click();
   });
+  dropzone.addEventListener("click", () => fileInput.click());
 
   ["dragenter", "dragover"].forEach((evt) =>
     dropzone.addEventListener(evt, (e) => {
@@ -234,28 +301,87 @@
   function handleIncomingFiles(fileListObj) {
     if (!activeTool) return;
     const incoming = Array.from(fileListObj);
-    if (activeTool.multiple) {
-      selectedFiles = selectedFiles.concat(incoming);
-    } else {
-      selectedFiles = incoming.slice(0, 1);
-    }
+    if (incoming.length === 0) return;
+
+    const newEntries = incoming.map((file) => ({
+      id: ++entrySeq,
+      file,
+      kind: "pending",
+      valid: null,
+      pageCount: null,
+      thumbnailUrl: null,
+    }));
+
+    entries = activeTool.multiple ? entries.concat(newEntries) : newEntries;
     resultsArea.innerHTML = "";
     statusArea.classList.add("hidden");
+    selectedEntryId = newEntries[0].id;
+
     renderFileList();
+    renderPreview();
     updateConvertButton();
+
+    // Sniff each new file's real type in the background, then re-render
+    // once we know whether it actually matches what this tool expects.
+    newEntries.forEach((entry) => {
+      window.ConvUtils.detectFileKind(entry.file).then(async (kind) => {
+        entry.kind = kind;
+        entry.valid = activeTool.expectedKinds.includes(kind);
+
+        // For valid PDFs, parse once up front and cache the page count —
+        // both the split-range prefill and the preview thumbnail read from
+        // this instead of each independently (and separately) re-parsing
+        // the file, which previously meant the ranges field could still be
+        // empty by the time the user looked at it.
+        if (entry.valid && kind === "pdf") {
+          try {
+            entry.pdfDoc = await window.ConvUtils.loadPdfDocument(entry.file);
+            entry.pageCount = entry.pdfDoc.numPages;
+          } catch (err) {
+            entry.valid = false;
+            entry.loadError = err.message;
+          }
+        }
+
+        renderFileList();
+        updateConvertButton();
+        if (entry.id === selectedEntryId) renderPreview();
+        if (entry.valid && kind === "pdf" && activeTool.id === "split-pdf") {
+          prefillSplitRanges(entry);
+        }
+      }).catch((err) => {
+        // Type detection itself failed (e.g. a required vendor library
+        // didn't load). Previously this left the badge on "…" forever with
+        // no visible cause — now it resolves to a clearly-flagged error
+        // state instead of hanging silently.
+        console.error("File type detection failed for", entry.file.name, err);
+        entry.kind = "unknown";
+        entry.valid = false;
+        entry.loadError = err && err.message ? err.message : String(err);
+        renderFileList();
+        updateConvertButton();
+        if (entry.id === selectedEntryId) renderPreview();
+      });
+    });
   }
 
-  function removeFile(index) {
-    selectedFiles.splice(index, 1);
+  function removeEntry(id) {
+    entries = entries.filter((e) => e.id !== id);
+    if (selectedEntryId === id) {
+      selectedEntryId = entries.length ? entries[0].id : null;
+    }
     renderFileList();
+    renderPreview();
     updateConvertButton();
   }
 
   clearBtn.addEventListener("click", () => {
-    selectedFiles = [];
+    entries = [];
+    selectedEntryId = null;
     resultsArea.innerHTML = "";
     statusArea.classList.add("hidden");
     renderFileList();
+    renderPreview();
     updateConvertButton();
   });
 
@@ -264,23 +390,37 @@
   // -------------------------------------------------------------------
   function renderFileList() {
     fileListEl.innerHTML = "";
-    dropHint.textContent = selectedFiles.length
-      ? `${selectedFiles.length} file${selectedFiles.length > 1 ? "s" : ""} selected`
-      : "No file selected";
-    clearBtn.classList.toggle("hidden", selectedFiles.length === 0);
+    fileCountLabel.textContent = entries.length ? `(${entries.length})` : "";
+    clearBtn.classList.toggle("hidden", entries.length === 0);
 
-    selectedFiles.forEach((file, index) => {
+    entries.forEach((entry, index) => {
       const row = document.createElement("div");
-      row.className = "file-row" + (activeTool.reorderable ? " reorderable" : "");
+      row.className = "file-row" +
+        (activeTool.reorderable ? " reorderable" : "") +
+        (entry.id === selectedEntryId ? " selected" : "");
       row.draggable = !!activeTool.reorderable;
       row.dataset.index = index;
+      row.dataset.entryId = entry.id;
+
+      const tagClass = entry.kind === "pending" ? "pending" : entry.valid ? "" : "bad";
+      const tagText = entry.kind === "pending" ? "…" : window.ConvUtils.KIND_LABEL[entry.kind];
+
       row.innerHTML = `
         <span class="file-icon">${activeTool.reorderable ? "⠿" : "📄"}</span>
-        <span class="file-name">${escapeHtml(file.name)}</span>
-        <span class="file-size">${window.ConvUtils.formatBytes(file.size)}</span>
+        <span class="file-name">${escapeHtml(entry.file.name)}</span>
+        <span class="kind-tag ${tagClass}">${tagText}</span>
         <button class="file-remove" title="Remove">✕</button>
       `;
-      row.querySelector(".file-remove").addEventListener("click", () => removeFile(index));
+      row.addEventListener("click", (e) => {
+        if (e.target.closest(".file-remove")) return;
+        selectedEntryId = entry.id;
+        renderFileList();
+        renderPreview();
+      });
+      row.querySelector(".file-remove").addEventListener("click", (e) => {
+        e.stopPropagation();
+        removeEntry(entry.id);
+      });
 
       if (activeTool.reorderable) {
         row.addEventListener("dragstart", (e) => {
@@ -291,8 +431,8 @@
           e.preventDefault();
           const fromIndex = parseInt(e.dataTransfer.getData("text/plain"), 10);
           const toIndex = index;
-          const [moved] = selectedFiles.splice(fromIndex, 1);
-          selectedFiles.splice(toIndex, 0, moved);
+          const [moved] = entries.splice(fromIndex, 1);
+          entries.splice(toIndex, 0, moved);
           renderFileList();
         });
       }
@@ -305,6 +445,95 @@
     const div = document.createElement("div");
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  // -------------------------------------------------------------------
+  // Preview pane — shows the currently-selected uploaded file: an image
+  // preview for JPG/PNG, a rendered first-page thumbnail + page count for
+  // PDFs, and basic file info for everything else (full layout preview of
+  // Office formats is out of scope for a client-side prototype).
+  // -------------------------------------------------------------------
+  function renderPreview() {
+    const entry = entries.find((e) => e.id === selectedEntryId);
+    if (!entry) {
+      previewName.textContent = "No file selected";
+      previewMeta.textContent = "";
+      previewBody.innerHTML = `<p class="preview-empty">Select a file on the left to preview it here.</p>`;
+      return;
+    }
+
+    previewName.textContent = entry.file.name;
+    const kindLabel = entry.kind === "pending" ? "detecting…" : window.ConvUtils.KIND_LABEL[entry.kind];
+    previewMeta.textContent = `${window.ConvUtils.formatBytes(entry.file.size)} · ${kindLabel}`;
+
+    if (entry.kind === "pending") {
+      previewBody.innerHTML = `<p class="preview-empty"><span class="spinner"></span>Detecting file type…</p>`;
+      return;
+    }
+
+    if (!entry.valid) {
+      previewBody.innerHTML = `<p class="preview-error">This file looks like <strong>${window.ConvUtils.KIND_LABEL[entry.kind]}</strong>, ` +
+        `but "${escapeHtml(activeTool.title)}" needs ${activeTool.expectedKinds.map((k) => window.ConvUtils.KIND_LABEL[k]).join("/")}. ` +
+        `Remove it or pick a matching file.</p>`;
+      return;
+    }
+
+    if (entry.kind === "png" || entry.kind === "jpg") {
+      const url = URL.createObjectURL(entry.file);
+      previewBody.innerHTML = "";
+      const img = document.createElement("img");
+      img.src = url;
+      img.alt = entry.file.name;
+      previewBody.appendChild(img);
+      return;
+    }
+
+    if (entry.kind === "pdf") {
+      previewBody.innerHTML = `<p class="preview-empty"><span class="spinner"></span>Rendering preview…</p>`;
+      const showThumbnail = (pdfDoc, pageCount) => {
+        window.ConvUtils.getPdfThumbnail(pdfDoc, 0.5).then((thumbnailUrl) => {
+          entry.thumbnailUrl = thumbnailUrl;
+          if (entry.id !== selectedEntryId) return; // user moved on already
+          previewBody.innerHTML = "";
+          const img = document.createElement("img");
+          img.src = thumbnailUrl;
+          img.alt = "First page preview";
+          previewBody.appendChild(img);
+          const caption = document.createElement("p");
+          caption.className = "preview-meta";
+          caption.style.marginTop = "10px";
+          caption.textContent = `${pageCount} page${pageCount === 1 ? "" : "s"}`;
+          previewBody.appendChild(caption);
+        }).catch((err) => {
+          if (entry.id !== selectedEntryId) return;
+          previewBody.innerHTML = `<p class="preview-error">Couldn't render a preview: ${escapeHtml(err.message)}</p>`;
+        });
+      };
+
+      if (entry.pdfDoc) {
+        showThumbnail(entry.pdfDoc, entry.pageCount);
+      } else {
+        window.ConvUtils.loadPdfDocument(entry.file).then((pdfDoc) => {
+          entry.pdfDoc = pdfDoc;
+          entry.pageCount = pdfDoc.numPages;
+          if (entry.id !== selectedEntryId) return;
+          showThumbnail(pdfDoc, pdfDoc.numPages);
+        }).catch((err) => {
+          if (entry.id !== selectedEntryId) return;
+          previewBody.innerHTML = `<p class="preview-error">Couldn't render a preview: ${escapeHtml(err.message)}</p>`;
+        });
+      }
+      return;
+    }
+
+    // docx / pptx / xlsx — show basic info; full rendering is out of scope.
+    previewBody.innerHTML = `
+      <dl class="preview-info-grid">
+        <dt>File</dt><dd>${escapeHtml(entry.file.name)}</dd>
+        <dt>Size</dt><dd>${window.ConvUtils.formatBytes(entry.file.size)}</dd>
+        <dt>Detected type</dt><dd>${window.ConvUtils.KIND_LABEL[entry.kind]}</dd>
+      </dl>
+    `;
   }
 
   // -------------------------------------------------------------------
@@ -329,13 +558,52 @@
       <label id="rangesWrap">
         Page ranges (e.g. 1-3,5,8-10)
         <input type="text" id="splitRanges" placeholder="1-3,5,8-10" />
+        <span class="preview-error hidden" id="rangesError" style="text-align:left;"></span>
       </label>
     `;
     const modeSelect = container.querySelector("#splitMode");
     const rangesWrap = container.querySelector("#rangesWrap");
+    const rangesInput = container.querySelector("#splitRanges");
     modeSelect.addEventListener("change", () => {
       rangesWrap.style.display = modeSelect.value === "ranges" ? "flex" : "none";
+      updateConvertButton();
     });
+    rangesInput.addEventListener("input", updateConvertButton);
+  }
+
+  // Once we know a selected PDF's page count, default the ranges field to
+  // "the whole document" so a first click on Convert has a sane, valid
+  // input instead of failing on an empty string.
+  function prefillSplitRanges(entry) {
+    const rangesInput = document.getElementById("splitRanges");
+    if (rangesInput && !rangesInput.value && entry.pageCount) {
+      rangesInput.value = entry.pageCount > 1 ? `1-${entry.pageCount}` : "1";
+    }
+    updateConvertButton();
+  }
+
+  function validateSplitRanges() {
+    const modeSelect = document.getElementById("splitMode");
+    const rangesInput = document.getElementById("splitRanges");
+    const errorEl = document.getElementById("rangesError");
+    if (!modeSelect || !rangesInput) return true; // options not rendered yet
+    if (modeSelect.value === "every") {
+      errorEl.classList.add("hidden");
+      return true;
+    }
+    const value = rangesInput.value.trim();
+    if (!value) {
+      errorEl.textContent = "Enter at least one page range, e.g. 1-3,5.";
+      errorEl.classList.remove("hidden");
+      return false;
+    }
+    if (!/^\s*\d+(\s*-\s*\d+)?(\s*,\s*\d+(\s*-\s*\d+)?)*\s*$/.test(value)) {
+      errorEl.textContent = "Use formats like 1-3, 5, 8-10 separated by commas.";
+      errorEl.classList.remove("hidden");
+      return false;
+    }
+    errorEl.classList.add("hidden");
+    return true;
   }
 
   function renderImageFormatOptions(container) {
@@ -366,13 +634,28 @@
   // Convert button state + run
   // -------------------------------------------------------------------
   function updateConvertButton() {
-    convertBtn.disabled = selectedFiles.length === 0;
+    if (!activeTool || entries.length === 0) {
+      convertBtn.disabled = true;
+      return;
+    }
+    // A tool can only run once every file is confirmed to be a type it
+    // actually accepts — this is what used to let a mismatched file sit
+    // silently in the list until conversion failed deep inside a library.
+    const allKnown = entries.every((e) => e.kind !== "pending");
+    const allValid = entries.every((e) => e.valid);
+
+    let optionsOk = true;
+    if (activeTool.id === "split-pdf") {
+      optionsOk = validateSplitRanges();
+    }
+
+    convertBtn.disabled = !(allKnown && allValid && optionsOk);
   }
 
   convertBtn.addEventListener("click", runConversion);
 
   async function runConversion() {
-    if (!activeTool || selectedFiles.length === 0) return;
+    if (!activeTool || entries.length === 0) return;
 
     convertBtn.disabled = true;
     resultsArea.innerHTML = "";
@@ -383,10 +666,11 @@
 
     try {
       const options = collectOptions();
+      const files = entries.map((e) => e.file);
       const fn = window.Converters[activeTool.fn];
       if (!fn) throw new Error(`Converter "${activeTool.fn}" is not implemented yet.`);
 
-      const outputs = await fn(selectedFiles, options, ({ pct, message }) => {
+      const outputs = await fn(files, options, ({ pct, message }) => {
         progressFill.style.width = `${pct}%`;
         statusLine.innerHTML = `<span class="spinner"></span>${escapeHtml(message)}`;
       });
@@ -403,7 +687,7 @@
       statusLine.textContent = "Error: " + (err && err.message ? err.message : String(err));
       statusLine.classList.add("error");
     } finally {
-      convertBtn.disabled = selectedFiles.length === 0;
+      updateConvertButton();
     }
   }
 

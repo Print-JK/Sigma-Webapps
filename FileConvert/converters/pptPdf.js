@@ -16,7 +16,7 @@
  */
 (function (global) {
   "use strict";
-  const { readFileAsArrayBuffer, renderPdfPageToCanvas, baseName } = window.ConvUtils;
+  const { readFileAsArrayBuffer, renderPdfPageToCanvas, baseName, stripInvisibleChars, loadUnicodeFonts } = window.ConvUtils;
 
   // ---------------------------------------------------------------------
   // PDF -> PPTX
@@ -60,7 +60,7 @@
 
   function extractSlideTexts(xml) {
     const matches = [...xml.matchAll(/<a:t>([^<]*)<\/a:t>/g)];
-    return matches.map((m) => decodeXmlEntities(m[1])).filter((t) => t.trim());
+    return matches.map((m) => stripInvisibleChars(decodeXmlEntities(m[1]))).filter((t) => t.trim());
   }
 
   async function extractSlideImages(zip, slideRelsPath, slideNum) {
@@ -87,7 +87,7 @@
   }
 
   async function pptToPdf(files, options, onProgress) {
-    const { PDFDocument, StandardFonts, rgb } = PDFLib;
+    const { PDFDocument, rgb } = PDFLib;
     const file = files[0];
     const bytes = await readFileAsArrayBuffer(file);
     const zip = await JSZip.loadAsync(bytes);
@@ -105,8 +105,7 @@
     }
 
     const pdfDoc = await PDFDocument.create();
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const titleFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const { font, boldFont: titleFont } = await loadUnicodeFonts(pdfDoc);
     const pageW = 720, pageH = 540, margin = 40; // 10in x 7.5in @72dpi, matches common slide size
 
     for (let i = 0; i < slidePaths.length; i++) {

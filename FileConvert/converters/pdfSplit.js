@@ -14,7 +14,7 @@
     const parts = rangeStr.split(",").map((s) => s.trim()).filter(Boolean);
     const groups = [];
     for (const part of parts) {
-      const m = /^(\d+)(?:-(\d+))?$/.exec(part);
+      const m = /^(\d+)\s*(?:-\s*(\d+))?$/.exec(part);
       if (!m) throw new Error(`Invalid range "${part}". Use formats like 1-3 or 5.`);
       let start = parseInt(m[1], 10);
       let end = m[2] ? parseInt(m[2], 10) : start;

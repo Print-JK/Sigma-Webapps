@@ -15,13 +15,13 @@
  */
 (function (global) {
   "use strict";
-  const { readFileAsArrayBuffer, escapeXml } = window.ConvUtils;
+  const { readFileAsArrayBuffer, escapeXml, stripInvisibleChars, loadUnicodeFonts } = window.ConvUtils;
 
   // ---------------------------------------------------------------------
   // Word (.docx) -> PDF
   // ---------------------------------------------------------------------
   async function wordToPdf(files, options, onProgress) {
-    const { PDFDocument, StandardFonts, rgb } = PDFLib;
+    const { PDFDocument, rgb } = PDFLib;
     const file = files[0];
 
     onProgress && onProgress({ pct: 10, message: "Unpacking .docx with mammoth…" });
@@ -35,7 +35,7 @@
     // Flatten to a simple block list: { text, bold, heading }
     const blocks = [];
     container.querySelectorAll("p, h1, h2, h3, h4, li").forEach((el) => {
-      const text = el.textContent.trim();
+      const text = stripInvisibleChars(el.textContent).trim();
       if (!text) return;
       blocks.push({
         text,
@@ -48,8 +48,7 @@
 
     onProgress && onProgress({ pct: 45, message: "Laying out pages…" });
     const pdfDoc = await PDFDocument.create();
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const { font, boldFont } = await loadUnicodeFonts(pdfDoc);
 
     const pageW = 612, pageH = 792, margin = 56;
     const maxWidth = pageW - margin * 2;
@@ -134,7 +133,7 @@
 
       let lastLineY = null;
       for (const line of lines) {
-        const text = line.text.trim();
+        const text = stripInvisibleChars(line.text).trim();
         if (!text) continue;
         const gap = lastLineY === null ? 0 : Math.abs(line.y - lastLineY);
         if (paragraphs.length === 0 || gap > 18) {
