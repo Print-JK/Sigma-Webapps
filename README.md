@@ -24,7 +24,15 @@ SIGMA-WEBAPPS/
 │
 ├── FileConvert/
 │   ├── index.html
-│   └── styles.css
+│   ├── styles.css
+│   └──lib/
+│       ├── excelPdf.js
+│       ├── imagePdf.js
+│       ├── pdfMerge.js
+│       ├── pdfSplit.js
+│       ├── pptPdf.js
+│       ├── utils.js
+│       └── wordPdf.js
 │
 ├── lib/
 │   ├── fontkit.umd.min.js
