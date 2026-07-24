@@ -3,22 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LocalOCR</title>
+  <title>Client-Side Text Extractor (PaddleOCR)</title>
   <link rel="stylesheet" href="style.css" />
-  <!-- Tesseract.js for pure client-side OCR
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script> -->
-  <script src="../lib/tesseract.min.js"></script>
-  <!-- PDF.js for rendering PDF pages to canvas for OCR
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script> -->
-  <script src="../lib/pdf.min.js"></script>
+
+  <!-- ONNX Runtime Web Engine -->
+  <script src="lib/ort.min.js"></script>
+  <!-- Official PaddleOCR JS Browser SDK --><!-- Import PaddleOCR as an ES Module and attach it to window -->
+<script type="module">
+  import { PaddleOCR } from "https://cdn.jsdelivr.net/npm/@paddleocr/paddleocr-js@0.4.2/+esm";
+  window.PaddleOCR = PaddleOCR;
+</script>
+  <!-- PDF.js for multi-page support -->
+  <script src="../../lib/pdf.min.js"></script>
 </head>
 <body>
   <div class="app-container">
-    <!-- Header -->
     <header class="header">
-      <h1>Image to Text Converter</h1>
-      <p>Local text extractor, this version may have scan errors, for better results try: <a href="https://www.imagetotext.info/" target="_blank">This</a></p> 
-      <p>Test this: <a href="LocalOCR_Beta/index.html" target="_blank">Test</a></p>
+      <h1>PaddleOCR Text Extractor</h1>
+      <p>High-Accuracy Deep Learning OCR (Runs 100% Client-Side via ONNX & WebAssembly)</p>
+    </header>
 
     <!-- Upload Area -->
     <div class="upload-section" id="drop-zone">
@@ -38,25 +41,22 @@
           </button>
           <input type="file" id="file-input" multiple hidden />
         </div>
-        <span class="disclaimer">*This is only good for screenshots.</span>
+        <span class="disclaimer">*Your privacy is protected! No data is transmitted or stored.</span>
       </div>
-
     </div>
 
-    <!-- Main Workspace (Dark Layout inspired by Reference 3) -->
+    <!-- Main Workspace -->
     <div class="workspace-container hidden" id="workspace">
-      <!-- Sidebar / File List -->
+      <!-- Sidebar -->
       <aside class="sidebar">
         <div class="sidebar-header">
           <h3>FILES LIST</h3>
           <button class="btn-small" id="add-more-btn">+ Add More</button>
         </div>
-        <ul class="file-list" id="file-list">
-          <!-- Dynamically populated -->
-        </ul>
+        <ul class="file-list" id="file-list"></ul>
       </aside>
 
-      <!-- Viewer / Text Box -->
+      <!-- Viewer -->
       <main class="text-viewer">
         <div class="viewer-header">
           <div class="file-info">
@@ -73,13 +73,13 @@
         </div>
 
         <div class="viewer-body">
-          <div id="status-bar" class="status-bar hidden"></div>
+          <div id="status-bar" class="status-bar hidden">Initializing PaddleOCR model...</div>
           <textarea id="output-text" readonly placeholder="Select a file or wait for extraction..."></textarea>
         </div>
       </main>
     </div>
   </div>
 
-  <script src="OCR.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
