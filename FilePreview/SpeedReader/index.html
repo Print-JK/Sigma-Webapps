@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Speed Reader</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- FontAwesome Icons for Navigation Styling -->
+  <link rel="stylesheet" href="../../lib/all.min.css" />
+  <!-- Local PDF.js Library -->
+  <script src="../../lib/pdf.min.js"></script>
+</head>
+<body>
+  <div id="wrapper">
+    <div class="overlay" id="overlay"></div>
+
+    <!-- Off-Canvas Sidebar Wrapper -->
+    <nav class="navbar navbar-inverse fixed-top" id="sidebar-wrapper" role="navigation">
+      <ul class="nav sidebar-nav">
+        <li class="sidebar-header">
+          <div class="sidebar-brand">
+            <a href="#">Settings</a>
+          </div>
+        </li>
+
+        <!-- PDF File Upload Section -->
+        <li class="menu-item-container">
+          <div class="menu-label"> PDF Upload</div>
+          <input type="file" id="pdf-input" accept="application/pdf" class="hidden" />
+          <button class="btn-sidebar" id="btn-browse">Choose PDF File</button>
+        </li>
+
+        <!-- Raw Text Input Section -->
+        <li class="menu-item-container">
+          <div class="menu-label"> Paste Raw Text</div>
+          <textarea id="raw-text-input" placeholder="Paste text here..."></textarea>
+          <button class="btn-sidebar" id="btn-load-text">Load Text</button>
+        </li>
+
+        <!-- Reading Mode Select -->
+        <li class="menu-item-container">
+          <div class="menu-label"> Reading Mode</div>
+          <select id="mode-select" class="dropdown-input">
+            <option value="rsvp">RSVP Focal Point</option>
+            <option value="scroll">Vertical Scroll</option>
+          </select>
+        </li>
+
+        <!-- Speed (WPS / WPM) Control -->
+        <li class="menu-item-container">
+          <div class="menu-label">Speed (WPS / WPM)</div>
+          <div class="input-with-slider">
+            <input type="number" id="wps-input" min="1" max="25" step="0.5" value="6.0" />
+            <input type="range" id="wps-slider" min="1" max="25" step="0.5" value="6.0" />
+          </div>
+          <span class="wpm-indicator" id="wpm-display">360 WPM</span>
+        </li>
+
+        <!-- Line Density Control -->
+        <li class="menu-item-container" id="density-control-group">
+          <div class="menu-label"> Line Density</div>
+          <div class="input-with-slider">
+            <input type="number" id="density-input" min="1.0" max="3.0" step="0.1" value="1.8" />
+            <input type="range" id="density-slider" min="1.0" max="3.0" step="0.1" value="1.8" />
+          </div>
+        </li>
+      </ul>
+    </nav>
+    <!-- /#sidebar-wrapper -->
+
+    <!-- Page Content Area -->
+    <div id="page-content-wrapper">
+      <button type="button" class="hamburger animated fadeInLeft is-closed" id="hamburger-btn">
+        <span class="hamb-top"></span>
+        <span class="hamb-middle"></span>
+        <span class="hamb-bottom"></span>
+      </button>
+
+      <div class="container">
+        <header class="app-header">
+          <h1>Speed Reader</h1>
+        </header>
+
+        <main class="text-viewer">
+          <div class="viewer-header">
+            <div class="file-info">
+              <span id="active-source-name">No text loaded</span>
+              <span class="meta-tag" id="doc-meta-info">0 words</span>
+            </div>
+            <div class="action-buttons">
+              <button class="btn-primary" id="btn-toggle-play">Start Reader</button>
+              <button class="btn-small" id="btn-reset">Reset</button>
+            </div>
+          </div>
+
+          <div class="viewer-body">
+            <div class="status-bar" id="status-bar">Click the hamburger icon top-left to load a PDF or paste text.</div>
+
+            <!-- Mode 1: RSVP Speed Reading Display -->
+            <div class="rsvp-container" id="rsvp-display">
+              <div class="rsvp-target-lines">
+                <div class="rsvp-line top-line"></div>
+                <div class="rsvp-crosshair top-mark"></div>
+                <div class="rsvp-crosshair bottom-mark"></div>
+                <div class="rsvp-line bottom-line"></div>
+              </div>
+              <div class="rsvp-word-box" id="rsvp-word-box">
+                <span class="rsvp-part left-part">Speed</span><span class="rsvp-part focal-letter">R</span><span class="rsvp-part right-part">eader</span>
+              </div>
+              <div class="wpm-footer-badge" id="rsvp-speed-badge">360 wpm</div>
+            </div>
+
+            <!-- Mode 2: Multi-Line Vertical Continuous Scroll Viewport -->
+            <div class="reader-viewport hidden" id="reader-viewport">
+              <div class="reader-stream" id="reader-stream"></div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+    <!-- /#page-content-wrapper -->
+  </div>
+  <!-- /#wrapper -->
+
+  <script src="script.js"></script>
+</body>
+</html>

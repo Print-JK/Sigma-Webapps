@@ -35,6 +35,8 @@ SIGMA-WEBAPPS/
 │       └── wordPdf.js
 │
 ├── lib/
+│   ├── all.min.css
+│   ├── ort.min.js
 │   ├── fontkit.umd.min.js
 │   ├── fonts-data.js
 │   ├── jszip.min.js
@@ -50,11 +52,19 @@ SIGMA-WEBAPPS/
 │   ├── FilePrev.js
 │   ├── index.html
 │   └── style.css
+│   └──SpeedReader/
+│       ├── index.html
+│       ├── script.js
+│       └── style.css
 │
 ├── LocalOCR/
 │   ├── index.html
 │   ├── OCR.js
 │   └── style.css
+│   └──PaddleOCR/
+│       ├── index.html
+│       ├── script.js
+│       └── style.css
 │
 ├── Main/
 │   └── index.html
@@ -86,17 +96,17 @@ The application currently encompasses the following functional modules:
 Function: Securely encrypt and decrypt password data stored in CSV format using locally generated keys.
 Capability: Local key file generation and secure local file interaction via browser APIs.
 
-3. ZIPEncrypt
+2. ZIPEncrypt
    
 Function: Client-side encryption/decryption of ZIP archives.
 Capability: Preview functionality for embedded media (PDF, PNG, GIF, PSD, MP4, most files that is supported by FilePreview) upon decryption.
 
-4. FilePreview
+3. FilePreview
    
 Function: A single interface to load and preview various file types directly in the browser.
 Supported Formats: PDF, PNG, JPG, GIF, PSD (Yes PSD too), MP4, MP3, CSV, and Markdown (MD).
 
-5. FileConvert (not ideal, only use conversions for low-stakes files and personal viewing)
+4. FileConvert (not ideal, only use conversions for low-stakes files and personal viewing)
 
 Function: Perform format conversions or merging entirely within the local browser environment, basically a knock-off of IlovePDF
 
@@ -114,6 +124,10 @@ Conversions includes:
 Function: Upload an image to extract text using a locally embedded Machine Learning model.
 Capability: Extraction of both standard digital text and handwritten text from the uploaded image.
 
+6. SpeedReader
+   
+Function: Upload an a pdf file or a text passage for automatic scroll reading or RSVP focus reading.
+Capability: Extraction of text and displaying in RSVP or Scroller mode.
 
 ## Important Operational Notes (Constraints & Risks)
 Local Execution Mandate: This application is not intended for online hosting. All file operations must be strictly confined to the local machine environment, as it may contain vulnerable code.
