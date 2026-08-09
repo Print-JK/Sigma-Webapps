@@ -20,7 +20,7 @@ SIGMA-WEBAPPS/
 │   ├── OCR.png
 │   ├── passman.jpg
 │   ├── temp.jpg
-│   ├── NCS.gif
+│   ├── NCS.jpg
 │   └── wip.jpg
 │
 ├── FileConvert/
