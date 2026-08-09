@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Spotify Style Client-Side MP3 Player</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="topbar">
+    <div class="brand">
+      🎵 Spoti<span>Local</span>
+    </div>
+    <div class="topbar-note">Client-Side HTML5 Web Audio Engine</div>
+  </header>
+
+  <!-- Main Spotify-Style App Container -->
+  <div class="app-container">
+    
+    <!-- Left Sidebar: Uploads & Filter Sub-Playlists -->
+    <aside class="workspace-sidebar">
+      <!-- File/Folder Uploader Dropzone -->
+      <div class="dropzone compact" id="dropzone" onclick="document.getElementById('singleInput').click()">
+        <p>📁 Drag & Drop audio or <span class="browse-link">browse</span></p>
+        <span class="sidebar-label" style="display:block; margin-top: 4px;">Supports MP3, WAV, OGG, AAC, FLAC</span>
+      </div>
+
+      <!-- Quick Upload Controls -->
+      <div class="upload-buttons">
+        <button class="btn btn-secondary" onclick="document.getElementById('singleInput').click()">📄 File</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('folderInput').click()">📁 Folder</button>
+        <input type="file" id="singleInput" accept="audio/*" multiple onchange="handleFileSelect(event)" class="hidden">
+        <input type="file" id="folderInput" webkitdirectory directory multiple onchange="handleFileSelect(event)" class="hidden">
+      </div>
+
+      <!-- Search & Sub-Playlist Filtering -->
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Filter playlist (e.g. ABBA, Bon Jovi, etc)..." oninput="handleSearch(event)">
+      </div>
+
+      <!-- Playlist Queue Header -->
+      <div class="sidebar-header-row">
+        <span class="sidebar-label" id="playlistCountLabel">Tracks (0)</span>
+        <button class="text-btn" onclick="clearPlaylist()">Clear All</button>
+      </div>
+
+      <!-- File Queue List -->
+      <div class="file-list" id="fileList">
+        <div class="empty-state">No tracks loaded yet.</div>
+      </div>
+    </aside>
+
+    <!-- Main Workspace (Center & Right Stage) -->
+    <main class="workspace-main">
+      <div class="now-playing-hero">
+        <div class="cover-art-container">
+          <canvas id="visualizerCanvas" width="300" height="300"></canvas>
+          <div class="cover-placeholder" id="coverPlaceholder">🎵</div>
+        </div>
+
+        <div class="track-details">
+          <span class="badge" id="nowPlayingBadge">NOW PLAYING</span>
+          <h1 id="heroTrackTitle">No Track Selected</h1>
+          <p id="heroTrackArtist">Select or upload audio files to start playback</p>
+          <p id="heroTrackMeta" class="meta-text">-</p>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Persistent Bottom Spotify Playback Bar -->
+  <footer class="player-bar">
+    <!-- Left: Track Metadata Info -->
+    <div class="player-left">
+      <div class="mini-art">🎵</div>
+      <div class="mini-info">
+        <div class="mini-title" id="miniTitle">Not Playing</div>
+        <div class="mini-artist" id="miniArtist">-</div>
+      </div>
+    </div>
+
+    <!-- Center: Playback Controls & Progress Timeline -->
+    <div class="player-center">
+      <div class="control-buttons">
+        <button class="control-btn" id="shuffleBtn" onclick="toggleShuffle()" title="Shuffle (Filtered Playlist)">🔀</button>
+        <button class="control-btn" onclick="playPreviousTrack()" title="Previous">⏮</button>
+        <button class="control-btn play-pause-btn" id="playPauseBtn" onclick="togglePlayPause()" title="Play/Pause">▶</button>
+        <button class="control-btn" onclick="playNextTrack()" title="Next">⏭</button>
+        <button class="control-btn" id="repeatBtn" onclick="toggleRepeat()" title="Repeat Mode">🔁</button>
+      </div>
+
+      <div class="playback-timeline">
+        <span id="currentTime">0:00</span>
+        <input type="range" id="progressBar" value="0" min="0" max="100" oninput="seekAudio(event)">
+        <span id="durationTime">0:00</span>
+      </div>
+    </div>
+
+    <!-- Right: Volume Controls -->
+    <div class="player-right">
+      <button class="control-btn" id="muteBtn" onclick="toggleMute()">🔊</button>
+      <input type="range" id="volumeBar" value="100" min="0" max="100" oninput="adjustVolume(event)">
+    </div>
+  </footer>
+
+  <audio id="audioEngine"></audio>
+  <script src="script.js"></script>
+</body>
+</html>
