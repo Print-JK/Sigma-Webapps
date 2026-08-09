@@ -90,6 +90,15 @@ SIGMA-WEBAPPS/
 
 ## How to Run Locally:
 
+clone the repository:
+`git clone https://github.com/Print-JK/Sigma-Webapps.git`
+
+or
+
+Download the zip file for this project.
+
+then
+
 Ensure all files are present in the project directory structure.
 Navigate to the main entry file: Sigma-Webapps/Main/index.html in your local file explorer.
 Click the cards provided on the Mainpage to access the specific tools.
