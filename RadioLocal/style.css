@@ -7,11 +7,8 @@
   --text-main: #f3f4f6;
   --text-muted: #9ca3af;
   --border-color: #374151;
-  --sidebar-width: 320px;
+  --sidebar-width: 280px;
   --player-bar-height: 90px;
-
-  --success-color: #22c55e;
-  --danger-color: #ef4444;
   --radius: 10px;
 }
 
@@ -27,66 +24,91 @@ html, body {
   color: var(--text-main);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  position: relative;
 }
 
-/* Top bar */
-.topbar {
+/* ---------- Off-Canvas Layout Wrappers ---------- */
+#wrapper {
+  display: flex;
+  height: calc(100vh - var(--player-bar-height));
+  width: 100vw;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.5s ease;
+}
+
+#sidebar-wrapper {
+  z-index: 1000;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  transition: all 0.5s ease;
+}
+
+#wrapper.toggled #sidebar-wrapper {
+  width: var(--sidebar-width);
+}
+
+#page-content-wrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transition: all 0.5s ease;
+}
+
+#wrapper.toggled #page-content-wrapper {
+  margin-left: var(--sidebar-width);
+  width: calc(100% - var(--sidebar-width));
+}
+
+/* ---------- Sidebar Internal Content ---------- */
+.sidebar-header {
+  text-align: center;
+  font-size: 20px;
+  position: relative;
+  width: 100%;
+}
+
+.sidebar-brand {
+  height: 60px;
+  background: var(--bg-tertiary);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 14px 28px;
+  justify-content: center;
   border-bottom: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  height: 56px;
-  flex-shrink: 0;
 }
 
-.brand {
-  font-weight: 700;
-  font-size: 1.2rem;
+.sidebar-brand a {
   color: var(--accent-color);
-  letter-spacing: 0.02em;
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-decoration: none;
 }
 
-.brand span {
+.sidebar-brand a span {
   color: var(--text-main);
 }
 
-.topbar-note {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
-/* Main App Layout Container */
-.app-container {
-  display: flex;
-  flex: 1;
-  height: calc(100vh - 56px - var(--player-bar-height));
-  overflow: hidden;
-}
-
-/* Sidebar & Uploads */
-.workspace-sidebar {
-  width: var(--sidebar-width);
-  flex-shrink: 0;
-  border-right: 1px solid var(--border-color);
+.sidebar-content-padding {
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background: rgba(255, 255, 255, 0.01);
-  overflow: hidden;
+  width: var(--sidebar-width);
 }
 
 .dropzone {
   border: 2px dashed var(--border-color);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 12px;
   text-align: center;
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
   background: rgba(255, 255, 255, 0.01);
 }
 
@@ -97,7 +119,7 @@ html, body {
 
 .dropzone p {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
 }
 
 .browse-link {
@@ -119,11 +141,6 @@ html, body {
   border-radius: 6px;
   font-size: 0.8rem;
   cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.btn:hover {
-  background: var(--border-color);
 }
 
 .search-box input {
@@ -137,10 +154,6 @@ html, body {
   outline: none;
 }
 
-.search-box input:focus {
-  border-color: var(--accent-color);
-}
-
 .sidebar-header-row {
   display: flex;
   justify-content: space-between;
@@ -149,7 +162,6 @@ html, body {
 
 .sidebar-label {
   font-size: 0.72rem;
-  letter-spacing: 0.06em;
   color: var(--text-muted);
   font-weight: 600;
   text-transform: uppercase;
@@ -163,17 +175,12 @@ html, body {
   cursor: pointer;
 }
 
-.text-btn:hover {
-  color: var(--danger-color);
-}
-
-/* File Playlist Queue */
 .file-list {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  max-height: 300px;
   overflow-y: auto;
-  flex: 1;
 }
 
 .file-row {
@@ -185,11 +192,6 @@ html, body {
   border-radius: 8px;
   padding: 8px 12px;
   cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.file-row:hover {
-  border-color: var(--text-muted);
 }
 
 .file-row.active {
@@ -209,19 +211,92 @@ html, body {
   color: var(--text-muted);
   font-size: 0.8rem;
   text-align: center;
-  margin-top: 20px;
+  margin-top: 10px;
 }
 
-/* Workspace Main Display Stage */
+/* ---------- Animated Hamburger Icon ---------- */
+.hamburger {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 999;
+  display: block;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.hamburger:focus {
+  outline: none;
+}
+
+.hamburger .hamb-top,
+.hamburger .hamb-middle,
+.hamburger .hamb-bottom {
+  position: absolute;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  background-color: var(--text-main);
+  border-radius: 2px;
+}
+
+.hamburger.is-closed .hamb-top {
+  top: 6px;
+  transition: all 0.35s ease-in-out;
+}
+
+.hamburger.is-closed .hamb-middle {
+  top: 50%;
+  margin-top: -1.5px;
+}
+
+.hamburger.is-closed .hamb-bottom {
+  bottom: 6px;
+  transition: all 0.35s ease-in-out;
+}
+
+.hamburger.is-open .hamb-top {
+  top: 50%;
+  margin-top: -1.5px;
+  transform: rotate(45deg);
+  transition: transform 0.2s cubic-bezier(0.73, 1, 0.28, 0.08);
+}
+
+.hamburger.is-open .hamb-middle {
+  display: none;
+}
+
+.hamburger.is-open .hamb-bottom {
+  top: 50%;
+  margin-top: -1.5px;
+  transform: rotate(-45deg);
+  transition: transform 0.2s cubic-bezier(0.73, 1, 0.28, 0.08);
+}
+
+/* ---------- Backdrop Overlay ---------- */
+.overlay {
+  position: absolute;
+  display: none;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 998;
+}
+
+/* ---------- Stage Center View ---------- */
 .workspace-main {
-  flex: 1;
-  padding: 32px;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  padding: 32px;
   background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.08), transparent 50%);
-  overflow-y: auto;
 }
 
 .now-playing-hero {
@@ -229,14 +304,14 @@ html, body {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 24px;
-  max-width: 500px;
+  gap: 20px;
+  max-width: 450px;
   width: 100%;
 }
 
 .cover-art-container {
-  width: 260px;
-  height: 260px;
+  width: 240px;
+  height: 240px;
   border-radius: var(--radius);
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
@@ -269,11 +344,10 @@ html, body {
   color: var(--accent-color);
   border: 1px solid rgba(59, 130, 246, 0.35);
   font-weight: 600;
-  letter-spacing: 0.05em;
 }
 
 .track-details h1 {
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   margin: 10px 0 6px;
   word-break: break-word;
 }
@@ -281,15 +355,10 @@ html, body {
 .track-details p {
   color: var(--text-muted);
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
-.track-details .meta-text {
-  font-size: 0.75rem;
-  margin-top: 6px;
-}
-
-/* Spotify Player Bottom Bar */
+/* ---------- Bottom Player Bar ---------- */
 .player-bar {
   height: var(--player-bar-height);
   background: var(--bg-secondary);
@@ -298,8 +367,8 @@ html, body {
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  flex-shrink: 0;
-  z-index: 10;
+  z-index: 1001;
+  position: relative;
 }
 
 .player-left {
@@ -307,12 +376,12 @@ html, body {
   align-items: center;
   gap: 12px;
   width: 25%;
-  min-width: 180px;
+  min-width: 160px;
 }
 
 .mini-art {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   background: var(--bg-tertiary);
   border-radius: 6px;
   display: flex;
@@ -320,27 +389,16 @@ html, body {
   justify-content: center;
   font-size: 1.2rem;
   border: 1px solid var(--border-color);
-  flex-shrink: 0;
-}
-
-.mini-info {
-  overflow: hidden;
 }
 
 .mini-title {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .mini-artist {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .player-center {
@@ -349,7 +407,7 @@ html, body {
   align-items: center;
   gap: 8px;
   width: 50%;
-  max-width: 600px;
+  max-width: 500px;
 }
 
 .control-buttons {
@@ -358,7 +416,6 @@ html, body {
   gap: 16px;
 }
 
-/* Control Buttons & Active Indicators */
 .control-btn {
   position: relative;
   background: none;
@@ -366,19 +423,11 @@ html, body {
   color: var(--text-muted);
   font-size: 1.1rem;
   cursor: pointer;
-  transition: all 0.2s ease;
   padding: 6px;
-  border-radius: 50%;
-}
-
-.control-btn:hover {
-  color: var(--text-main);
-  transform: scale(1.1);
 }
 
 .control-btn.active {
   color: var(--accent-color);
-  text-shadow: 0 0 10px rgba(59, 130, 246, 0.6);
 }
 
 .control-btn.active::after {
@@ -391,29 +440,17 @@ html, body {
   height: 4px;
   background-color: var(--accent-color);
   border-radius: 50%;
-  box-shadow: 0 0 6px var(--accent-color);
 }
 
 .play-pause-btn {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: var(--text-main);
   color: var(--bg-primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
-}
-
-.play-pause-btn:hover {
-  background: #ffffff;
-  color: var(--bg-primary);
-  transform: scale(1.05);
-}
-
-.play-pause-btn.active::after {
-  display: none; /* Disable dot indicator on main play button */
 }
 
 .playback-timeline {
@@ -439,47 +476,26 @@ html, body {
   justify-content: flex-end;
   gap: 10px;
   width: 25%;
-  min-width: 140px;
+  min-width: 120px;
 }
 
 .hidden {
   display: none !important;
 }
 
-/* Mobile Responsive Adjustments */
+/* Mobile Overrides */
 @media (max-width: 768px) {
-  .app-container {
-    flex-direction: column;
-  }
-
-  .workspace-sidebar {
+  #wrapper.toggled #page-content-wrapper {
+    margin-left: 0;
     width: 100%;
-    height: 40%;
-    border-right: none;
-    border-bottom: 1px solid var(--border-color);
-  }
-
-  .workspace-main {
-    height: 60%;
-    padding: 16px;
-  }
-
-  .cover-art-container {
-    width: 160px;
-    height: 160px;
-  }
-
-  .player-bar {
-    padding: 0 12px;
-  }
-
-  .player-left {
-    width: 35%;
-    min-width: 0;
   }
 
   .player-right {
     display: none;
+  }
+
+  .player-left {
+    width: 35%;
   }
 
   .player-center {

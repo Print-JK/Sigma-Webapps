@@ -1,17 +1,22 @@
 // --- Global State ---
-let playlist = [];            // Full list of loaded File objects
-let activePlaylist = [];      // Filtered sub-playlist based on search term
-let playedTrackIndices = [];  // History tracking played indices to avoid duplicates in shuffle
+let playlist = [];
+let activePlaylist = [];
+let playedTrackIndices = [];
 let currentTrackIndex = -1;
 
 let isShuffle = false;
-let repeatMode = 0;           // 0 = Off, 1 = Repeat All, 2 = Repeat One
+let repeatMode = 0; // 0 = Off, 1 = Repeat All, 2 = Repeat One
+let isClosed = false;
 
-// Audio Context & Visualizer Nodes
+// Audio Context Nodes
 const audio = document.getElementById('audioEngine');
 let audioCtx, analyser, sourceNode, dataArray;
 
 // DOM Elements
+const wrapper = document.getElementById('wrapper');
+const hamburgerBtn = document.getElementById('hamburgerBtn');
+const overlay = document.getElementById('overlay');
+
 const fileListContainer = document.getElementById('fileList');
 const searchInput = document.getElementById('searchInput');
 const playlistCountLabel = document.getElementById('playlistCountLabel');
@@ -30,6 +35,23 @@ const repeatBtn = document.getElementById('repeatBtn');
 const progressBar = document.getElementById('progressBar');
 const currentTimeEl = document.getElementById('currentTime');
 const durationTimeEl = document.getElementById('durationTime');
+
+// --- Off-Canvas Sidebar Toggle ---
+function toggleOffCanvas() {
+  if (isClosed) {
+    overlay.style.display = 'none';
+    hamburgerBtn.classList.remove('is-open');
+    hamburgerBtn.classList.add('is-closed');
+    wrapper.classList.remove('toggled');
+    isClosed = false;
+  } else {
+    overlay.style.display = 'block';
+    hamburgerBtn.classList.remove('is-closed');
+    hamburgerBtn.classList.add('is-open');
+    wrapper.classList.add('toggled');
+    isClosed = true;
+  }
+}
 
 // --- Initialization ---
 window.addEventListener('DOMContentLoaded', () => {
@@ -89,7 +111,7 @@ function clearPlaylist() {
   renderPlaylistUI();
 }
 
-// --- Search & Filter Sub-Playlist Logic ---
+// --- Search & Sub-Playlist Logic ---
 function handleSearch(event) {
   applyPlaylistFilter();
 }
@@ -103,7 +125,6 @@ function applyPlaylistFilter() {
     activePlaylist = playlist.filter(file => file.name.toLowerCase().includes(query));
   }
 
-  // Reset played tracks tracker when filter changes
   playedTrackIndices = [];
   if (currentTrackIndex !== -1 && currentTrackIndex < activePlaylist.length) {
     playedTrackIndices.push(currentTrackIndex);
@@ -124,7 +145,12 @@ function renderPlaylistUI() {
   activePlaylist.forEach((file, idx) => {
     const row = document.createElement('div');
     row.className = `file-row ${idx === currentTrackIndex ? 'active' : ''}`;
-    row.onclick = () => playTrack(idx, true); // Manual selection resets tracking
+    row.onclick = () => {
+      playTrack(idx, true);
+      if (window.innerWidth <= 768 && isClosed) {
+        toggleOffCanvas(); // Close drawer on mobile after clicking
+      }
+    };
 
     row.innerHTML = `
       <span>🎵</span>
@@ -138,7 +164,6 @@ function renderPlaylistUI() {
 function playTrack(index, isManualSelection = false) {
   if (index < 0 || index >= activePlaylist.length) return;
 
-  // Manual track pick resets shuffle history
   if (isManualSelection) {
     playedTrackIndices = [];
   }
@@ -186,18 +211,16 @@ function playNextTrack() {
   if (activePlaylist.length === 0) return;
 
   if (isShuffle) {
-    // Check if all tracks in active filtered playlist have already been played once
     if (playedTrackIndices.length >= activePlaylist.length) {
-      if (repeatMode === 1) { // Repeat All: Reset shuffle history and restart
+      if (repeatMode === 1) {
         playedTrackIndices = [];
-      } else if (repeatMode === 0) { // Repeat Off: Stop playback when playlist ends
+      } else if (repeatMode === 0) {
         audio.pause();
         playPauseBtn.textContent = '▶';
         return;
       }
     }
 
-    // Pick a random unplayed track from the active playlist
     const unplayedIndices = activePlaylist
       .map((_, idx) => idx)
       .filter(idx => !playedTrackIndices.includes(idx));
@@ -211,11 +234,10 @@ function playNextTrack() {
       playTrack(randomIndex);
     }
   } else {
-    // Linear playback
     if (currentTrackIndex < activePlaylist.length - 1) {
       playTrack(currentTrackIndex + 1);
     } else if (repeatMode === 1) {
-      playTrack(0); // Loop back to start
+      playTrack(0);
     } else {
       audio.pause();
       playPauseBtn.textContent = '▶';
@@ -231,7 +253,7 @@ function playPreviousTrack() {
 }
 
 function handleTrackEnded() {
-  if (repeatMode === 2) { // Repeat Single Track
+  if (repeatMode === 2) {
     audio.currentTime = 0;
     audio.play();
   } else {
@@ -243,9 +265,7 @@ function handleTrackEnded() {
 function toggleShuffle() {
   isShuffle = !isShuffle;
   shuffleBtn.classList.toggle('active', isShuffle);
-  shuffleBtn.title = isShuffle 
-    ? "Shuffle: ON (No duplicate track plays)" 
-    : "Shuffle: OFF";
+  shuffleBtn.title = isShuffle ? "Shuffle: ON" : "Shuffle: OFF";
   
   playedTrackIndices = [];
   if (currentTrackIndex !== -1) playedTrackIndices.push(currentTrackIndex);
@@ -269,7 +289,7 @@ function toggleRepeat() {
   }
 }
 
-// --- Controls & Timeline Helpers ---
+// --- Controls & Helpers ---
 function updateProgress() {
   if (isNaN(audio.duration)) return;
   const percent = (audio.currentTime / audio.duration) * 100;
@@ -346,7 +366,7 @@ function setupDragAndDrop() {
   });
 }
 
-// --- Mobile Lockscreen Background Playback ---
+// --- Mobile Lockscreen Playback ---
 function setupMediaSession() {
   if ('mediaSession' in navigator) {
     navigator.mediaSession.setActionHandler('play', () => togglePlayPause());
@@ -369,7 +389,7 @@ function updateMediaSessionMetadata(title, artist) {
   }
 }
 
-// --- Real-time Visualizer Canvas ---
+// --- Visualizer ---
 function drawVisualizer() {
   requestAnimationFrame(drawVisualizer);
   if (!analyser) return;
@@ -386,10 +406,8 @@ function drawVisualizer() {
 
   for (let i = 0; i < dataArray.length; i++) {
     barHeight = (dataArray[i] / 255) * canvas.height * 0.7;
-
     ctx.fillStyle = '#3b82f6';
     ctx.fillRect(x, canvas.height - barHeight, barWidth - 2, barHeight);
-
     x += barWidth;
   }
 }
