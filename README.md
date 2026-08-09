@@ -74,9 +74,9 @@ SIGMA-WEBAPPS/
 │   ├── PassMan.js
 │   └── style.css
 │
-├── mp3-player/
-│   ├── Index.html
-│   ├── PassMan.js
+├── RadioLocal/
+│   ├── index.html
+│   ├── RadioLocal.js
 │   └── style.css
 │
 ├── ZIPencrypt/
@@ -134,7 +134,7 @@ Capability: Extraction of both standard digital text and handwritten text from t
 Function: Upload an a pdf file or a text passage for automatic scroll reading or RSVP focus reading.
 Capability: Extraction of text and displaying in RSVP or Scroller mode.
 
-7. mp3-player
+7. RadioLocal
    
 Function: similar to FilePreview, it loads various audio only files directly into the browser and play them.
 Capability: Traditional mp3 with visualization capabilities and features that a regular mp3 player should have with the added feature of filtering based on filename.
