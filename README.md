@@ -91,7 +91,8 @@ SIGMA-WEBAPPS/
 ## How to Run Locally:
 
 clone the repository:
-`git clone https://github.com/Print-JK/Sigma-Webapps.git`
+
+```git clone https://github.com/Print-JK/Sigma-Webapps.git```
 
 or
 
