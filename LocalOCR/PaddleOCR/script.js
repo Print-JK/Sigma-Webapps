@@ -50,6 +50,30 @@ browseBtn.addEventListener("click", () => fileInput.click());
 addMoreBtn.addEventListener("click", () => fileInput.click());
 fileInput.addEventListener("change", (e) => handleFiles(e.target.files));
 
+
+document.addEventListener("paste", (e) => {
+  const items = e.clipboardData || e.originalEvent.clipboardData;
+  if (!items || !items.items) return;
+
+  const pastedFiles = [];
+
+  for (let i = 0; i < items.items.length; i++) {
+    const item = items.items[i];
+    if (item.kind === "file") {
+      const file = item.getAsFile();
+      if (file) {
+        pastedFiles.push(file);
+      }
+    }
+  }
+
+  if (pastedFiles.length > 0) {
+    // Prevent default paste behavior if files were pasted
+    e.preventDefault();
+    handleFiles(pastedFiles);
+  }
+});
+
 // Drag and Drop Events
 ["dragenter", "dragover"].forEach((eventName) => {
   dropZone.addEventListener(eventName, (e) => {
