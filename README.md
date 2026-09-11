@@ -65,12 +65,13 @@ SIGMA-WEBAPPS/
 │   └──PaddleOCR/
 │       ├── index.html
 │       ├── script.js
+│       ├── ZIPencrypt.html
 │       └── style.css
 │
 ├── Main/
 │   └── index.html
 │
-├── PassMan/
+├── SecureStorage/
 │   ├── Index.html
 │   ├── PassMan.js
 │   └── style.css
@@ -79,9 +80,6 @@ SIGMA-WEBAPPS/
 │   ├── index.html
 │   ├── RadioLocal.js
 │   └── style.css
-│
-├── ZIPencrypt/
-│   └── index.html
 │
 ├── LICENSE
 └── README.md
