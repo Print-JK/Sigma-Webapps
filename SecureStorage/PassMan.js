@@ -266,86 +266,10 @@ function downloadBlob(content, filename) {
 // Initialize Default Table Headers on Load
 renderHeaders();
 
-
-// toggle logic
-
 const pageToggle = document.getElementById("pageToggle");
-const page1 = document.getElementById("page1");
-const page2 = document.getElementById("page2");
-const toggleLabel = document.getElementById("toggleLabel");
 
-let isPage2Loaded = false;
-let page2LoadFailed = false;
-
-pageToggle.addEventListener("change", async (e) => {
+pageToggle.addEventListener("change", (e) => {
     if (e.target.checked) {
-        if (!isPage2Loaded && !page2LoadFailed) {
-            await loadExternalPage("ZIPencrypt.html", page2);
-        }
-
-        page1.style.display = "none";
-        page2.style.display = "block";
-
-        // Fallback UI if loading failed
-        if (page2LoadFailed) {
-            setLabelFallback("ZIPencrypt.html");
-        } else {
-            setLabelNormal("ZIPEncrypt");
-        }
-    } else {
-        page1.style.display = "block";
-        page2.style.display = "none";
-        setLabelNormal("Passman");
+        window.location.href = "ZIPencrypt.html";
     }
 });
-
-async function loadExternalPage(filePath, targetContainer) {
-    try {
-        targetContainer.innerHTML = "<p style='text-align:center;'>Loading...</p>";
-        
-        const response = await fetch(filePath);
-        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-        
-        const htmlText = await response.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(htmlText, "text/html");
-
-        targetContainer.innerHTML = doc.body.innerHTML;
-
-        // Execute dynamic scripts inside loaded page
-        const scripts = targetContainer.querySelectorAll("script");
-        scripts.forEach(oldScript => {
-            const newScript = document.createElement("script");
-            Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
-            newScript.appendChild(document.createTextNode(oldScript.innerHTML));
-            oldScript.parentNode.replaceChild(newScript, oldScript);
-        });
-
-        isPage2Loaded = true;
-        page2LoadFailed = false;
-
-    } catch (error) {
-        page2LoadFailed = true;
-        targetContainer.innerHTML = `
-            <div style="text-align: center; padding: 2rem; color: #e11d48;">
-                <p>Failed to embed page directly inside container.</p>
-                <p><a href="${filePath}" target="_blank" style="color: #818cf8; text-decoration: underline;">Click here to open ${filePath} directly</a></p>
-            </div>`;
-        setLabelFallback(filePath);
-    }
-}
-
-// Helpers for switching label states
-function setLabelNormal(text) {
-    toggleLabel.innerText = text;
-    toggleLabel.style.pointerEvents = "none";
-    toggleLabel.style.textDecoration = "none";
-    toggleLabel.style.color = "#818cf8";
-}
-
-function setLabelFallback(filePath) {
-    toggleLabel.innerText = `Open ${filePath} ↗`;
-    toggleLabel.style.pointerEvents = "auto";
-    toggleLabel.style.textDecoration = "underline";
-    toggleLabel.style.color = "#f43f5e";
-}
