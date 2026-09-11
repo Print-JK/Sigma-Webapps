@@ -35,21 +35,22 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     <div class="row">
       <div class="card">
         <h2>Key management</h2>
+        
+        <div id="keyDrop" class="dropzone">Drag & drop key.bin here or click to choose</div>
+        <input id="keyInput" type="file" accept=".bin" class="hidden"/>
+        <p id="keyStatus">No key loaded.</p>
+        <p></p>  
         <div class="controls">
           <button id="btnGenKey" class="primary">Generate key</button>
           <a id="downloadKeyLink" class="hidden">Download key</a>
         </div>
-
-        <h3>Upload key</h3>
-        <div id="keyDrop" class="dropzone">Drag & drop key.bin here or click to choose</div>
-        <input id="keyInput" type="file" accept=".bin" class="hidden" />
-        <p id="keyStatus">No key loaded.</p>
-      </div>
+    </div>
 
       <div class="card">
         <h2>ZIP selection</h2>
         <input id="zipInput" type="file" accept=".zip,.enc" />
         <p id="zipStatus">No file selected.</p>
+        <p></p>
         <div class="controls">
           <button id="btnEncrypt" class="primary">Encrypt ZIP</button>
           <button id="btnDecrypt" class="primary">Decrypt file</button>
