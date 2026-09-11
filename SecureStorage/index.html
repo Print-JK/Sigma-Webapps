@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PassMan Multi-View</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="toggle-container">
+    <label class="switch">
+      <input type="checkbox" id="pageToggle">
+      <span class="slider round"></span>
+    </label>
+    <a id="toggleLabel" class="toggle-text" href="ZIPencrypt.html" target="_blank" style="pointer-events: none; text-decoration: none;">Passman</a>
+  </div>
+</div>
+
+  <div id="page1" class="page-view">
+    <h1>🔐 Local Password Manager</h1>
+
+    <div class="cards-grid">
+      
+      <div class="card">
+        <h2>1. Key Management</h2>
+        <div class="drop-zone" id="keyDropZone">
+          <p>Drag & Drop <code>.key</code> file here</p>
+          <span>or</span>
+          <input type="file" id="keyFileUpload" accept=".key" style="display:none" />
+          <button type="button" class="secondary" onclick="document.getElementById('keyFileUpload').click()">Browse File</button>
+        </div>
+        <div class="button-group" style="margin-top: 15px;">
+          <button id="generateKeyBtn">Generate & Download New Key</button>
+        </div>
+        <p id="keyStatus">No key loaded.</p>
+      </div>
+
+      <div class="card">
+        <h2>2. Decrypt & Load Vault</h2>
+        <div class="drop-zone" id="csvDropZone">
+          <p>Drag & Drop encrypted <code>.enc</code> or <code>.csv</code> file</p>
+          <span>or</span>
+          <input type="file" id="csvFileInput" accept=".txt,.csv,.enc" style="display:none" />
+          <button type="button" class="secondary" onclick="document.getElementById('csvFileInput').click()">Browse Vault File</button>
+        </div>
+        <div class="button-group" style="margin-top: 15px;">
+          <button id="addNewBtn">Create Blank Entry</button>
+          <button id="addColumnBtn" class="secondary">+ Add Column</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="card vault-card">
+      <div class="vault-header">
+        <div>
+          <h2>3. Password Vault</h2>
+          <span id="recordCount" class="badge">0 Records</span>
+        </div>
+        <div class="button-group">
+          <button id="downloadEncryptedBtn">Encrypt & Download Vault</button>
+          <button id="downloadCSVBtn" class="secondary">Download Plaintext CSV</button>
+        </div>
+      </div>
+
+      <div id="tableContainer" class="table-scroll-container">
+        <table id="passwordTable">
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+<div id="page2" class="page-view" style="display: none;">
+  <!-- External HTML content will load here automatically -->
+</div>
+
+  <script src="PassMan.js"></script>
+</body>
+</html>
