@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <title>File Previewer</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -13,12 +13,12 @@
       <span>📂</span> FilePrev
     </div>
     <div class="upload-controls">
-      <a class="btn" href="SpeedReader/index.html" style="text-decoration: none;" target=blank>Open SpeedReader</a>
+      <a class="btn" href="SpeedReader/index.html" style="text-decoration: none;" target="_blank">SpeedReader</a>
       <button class="btn btn-primary" onclick="document.getElementById('singleInput').click()">
-        📄 Upload Single File
+        📄 File
       </button>
       <button class="btn" onclick="document.getElementById('folderInput').click()">
-        📁 Upload Folder
+        📁 Folder
       </button>
       <input type="file" id="singleInput" onchange="handleSingleFile(event)">
       <input type="file" id="folderInput" webkitdirectory directory multiple onchange="handleFolderFiles(event)">
