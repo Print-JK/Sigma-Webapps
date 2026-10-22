@@ -299,15 +299,15 @@ function toggleRepeat() {
 
   if (repeatMode === 0) {
     repeatBtn.classList.remove('active');
-    repeatBtn.innerText = '🔁';
+    repeatBtn.innerText = '↻';
     repeatBtn.title = "Repeat: OFF";
   } else if (repeatMode === 1) {
     repeatBtn.classList.add('active');
-    repeatBtn.innerText = '🔁';
+    repeatBtn.innerText = '↻';
     repeatBtn.title = "Repeat: ALL";
   } else if (repeatMode === 2) {
     repeatBtn.classList.add('active');
-    repeatBtn.innerText = '🔂';
+    repeatBtn.innerText = '↻¹';
     repeatBtn.title = "Repeat: ONE";
   }
 }

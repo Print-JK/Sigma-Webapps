@@ -3,15 +3,38 @@
  */
 
 body {
-  padding: 24px 20px 48px;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background: var(--bg-base);
+  background-image: var(--bg-gradient);
+  background-attachment: fixed;
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+.app-container {
   max-width: 1200px;
   margin: 0 auto;
+  padding: 0 20px 48px;
 }
 
 .top-nav {
   display: flex;
   justify-content: center;
-  margin-bottom: 24px;
+  align-items: center;
+  padding: 8px 16px;
+  height: 48px;
+  min-height: 48px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 480px) {
+  .top-nav .status-indicator,
+  .top-nav .nav-pipe-mobile-hide {
+    display: none;
+  }
 }
 
 .page-title-section {

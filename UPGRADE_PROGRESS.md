@@ -13,17 +13,54 @@
 
 ## Second-Pass Engineering Tracker & Fidelity Repairs
 
-### Priority 1: RadioLocal Hidden Interface Bar
-- **Root Cause:** `#wrapper` was sized with `height: calc(100% - var(--player-bar-height))` while the body had `display: flex; flex-direction: column; overflow: hidden;` containing 3 children: `.top-bar-container` (48px), `#wrapper`, and `.player-bar` (84px). Because `#wrapper` did not account for `.top-bar-container`'s 48px height, the cumulative height exceeded the viewport by exactly 48px, pushing `.player-bar` partially/completely off-screen.
-- **Files Changed:** `RadioLocal/style.css`, `RadioLocal/index.html`
-- **Remedy:** Converted `#wrapper` to `flex: 1; min-height: 0; width: 100%;` and pinned `.player-bar` with `flex-shrink: 0; min-height: var(--player-bar-height);`. Added `flex-shrink: 0; height: var(--top-bar-height);` to `.top-bar-container`. Added Android safe-area padding `env(safe-area-inset-bottom)` and short viewport `@media (max-height: 480px)` breakpoint.
-- **Verification:** Verified via Chromium headless CDP on desktop (1280x800) and Android mobile (390x844). Bounding rects confirm `topBar` (0–48px), `wrapper` (48–629px), and `playerBar` (629–713px) with `isFullyVisible: true` and all transport controls (shuffle, prev, play/pause, next, repeat, volume, scrubber) interactive.
+### Priority 1: RadioLocal Hidden Interface Bar & Contrast Fixes
+- **Root Cause 1 (Layout Overflow):** `#wrapper` was sized with `height: calc(100% - var(--player-bar-height))` while the body had `display: flex; flex-direction: column; overflow: hidden;` containing 3 children: `.top-bar-container` (48px), `#wrapper`, and `.player-bar` (84px). Because `#wrapper` did not account for `.top-bar-container`'s 48px height, the cumulative height exceeded the viewport by exactly 48px, pushing `.player-bar` partially/completely off-screen.
+- **Root Cause 2 (CSS Variable Cycle & Invisibility):** In `RadioLocal/style.css`, `--text-main: var(--text-main, #f5f5f7);` was defined inside `:root`. Under CSS Custom Properties Level 1 specification, referencing a custom property within its own fallback creates an invalid computed-value cycle, causing the property to become unset and default to black text (`#000000`). On the dark charcoal/black background, this rendered the playlist titles, track labels, and hamburger lines virtually invisible.
+- **Root Cause 3 (Sidebar Off-Canvas Bleed & Mobile Overlap):** Sizing `#sidebar-wrapper` with `width: 0;` caused content to overflow and leak onto the canvas. On mobile screens (<480px), the player transport controls bar exceeded screen width due to hardcoded flex percentage bases (`flex: 0 0 160px;`).
+- **Files Changed:** `RadioLocal/style.css`, `RadioLocal/RadioLocal.js`, `RadioLocal/index.html`
+- **Remedies Applied:**
+  - Resolved circular CSS variable by explicitly declaring `--text-main: #f5f5f7;` and `--text-bright: #ffffff;`.
+  - Styled floating hamburger button as a clean glass circle with crisp white icon lines (`#ffffff`).
+  - Converted `#wrapper` to `flex: 1; min-height: 0; width: 100%;` and pinned `.player-bar` with `flex-shrink: 0; min-height: var(--player-bar-height);`.
+  - Added `flex-shrink: 0; height: var(--top-bar-height);` to `.top-bar-container`.
+  - Converted `#sidebar-wrapper` off-canvas behavior to GPU-accelerated `transform: translateX(-100%);` with smooth 0.35s ease transition.
+  - Sized mobile player bar with flexible containers (`flex: 0 1 110px`, `flex: 1 1 auto; max-width: none;`).
+  - Added Android safe-area padding `env(safe-area-inset-bottom)` and short viewport `@media (max-height: 480px)` breakpoint.
+- **Verification:** Verified via Chromium headless CDP on desktop (1280x800) and Android mobile (390x844). Bounding rects confirm `topBar` (0–48px), `wrapper` (48–629px), and `playerBar` (629–713px) with `isFullyVisible: true` and all transport controls (shuffle, prev, play/pause, next, repeat, volume, scrubber) interactive. High contrast text and controls verified via screenshot captures.
 
-### Priority 2: Apple Liquid Glass Design System
+### Priority 2: Apple Liquid Glass Design System & Non-Craft Apps UI Alignment
 - **Design Philosophy:** Faithful realization of Apple's official Liquid Glass specifications ([WWDC / SwiftUI Human Interface](https://developer.apple.com/documentation/SwiftUI/Applying-Liquid-Glass-to-custom-views)). Translucent layered materials, dynamic refraction hints, physical specular edge highlights (`inset 0 1px 1px 0 rgba(255,255,255,0.32)`), and concentric geometry.
+- **Theme Standardization Across All Non-Craft Tools:**
+  To ensure visual unity across the entire suite, all non-craft utilities have been redesigned to match RadioLocal's dark slate palette and centered floating Liquid Glass pill bar navigation:
+  - **`SecureStorage` (`PassMan` & `ZIPEncrypt`):**
+    - Replaced the confusing slider checkbox with a centered Liquid Glass pill nav: `⌂ Home | 🔐 PassMan | 🗜️ ZIPEncrypt | AES-GCM Local`.
+    - Added responsive `.main-container`, glass cards with specular highlights, and Apple System Blue buttons (`#0a84ff`).
+    - Standardized `ZIPencrypt.html` to share identical `--bg-base`, `--glass-bg`, and button styles.
+  - **`FilePreview`:**
+    - Centered top navigation pill bar (`⌂ Home | 📂 FilePrev | ⚡ SpeedReader | Local Offline`).
+    - Moved `📄 Choose File` and `📁 Choose Folder` directly inside the sidebar drawer header, eliminating top header clutter.
+    - Integrated mobile drawer toggle `☰ Files` into the floating pill bar, avoiding overlap.
+  - **`SpeedReader`:**
+    - Centered top pill navbar outside `#wrapper` with integrated `☰ Settings` toggle pill.
+    - Converted sidebar to hardware-accelerated `transform: translateX(-100%)`.
+    - Modernized word display stage into a concentric glass card with Apple System Blue controls.
+  - **`LocalOCR` & `PaddleOCR`:**
+    - Standardized centered Liquid Glass pill navigation.
+    - Added mobile hiding rules (`.nav-pipe-mobile-hide`, `.hide-mobile`) preventing pill bar wrapping on 375px screens.
+    - Unified glass panels for preprocessing controls, Before/After preview drawer, and results viewer.
+  - **`FileConvert`:**
+    - Centered `.top-nav-bar` to standard 48px height matching RadioLocal.
+    - Applied `--bg-primary: var(--bg-base)` and Liquid Glass cards with subtle hover elevations.
 - **Clear Layer Separation:** Glass is strictly reserved for the navigation and control layer (floating pill bars, toolbars, sheets, action bars, modal dialogs). Data content viewports (A4 paper in WordCraft, spreadsheet cells in GridCraft, PDF viewport in PdfCraft, drawing canvas in PhotoCraft, DAW clips in SoundCraft) maintain high-contrast, opaque legibility.
-- **Files Created / Changed:** `assets/modern-theme.css`, `assets/liquid-glass.js`, `RadioLocal/style.css`, `RadioLocal/index.html`.
 - **Accessibility:** Built-in automatic degradation for `@media (prefers-reduced-transparency: reduce)` (replaces translucency with solid high-contrast backgrounds) and `@media (prefers-reduced-motion: reduce)`.
+
+### Priority 2.1: Reverse Engineering Anything (REA) Skills Integration
+- Integrated 5 specialized REA skills into `.agents/skills/` and global configurations:
+  - `reverse-engineer-anything`: Reverse engineer native, managed, Electron/JS, packaged, firmware, and browser targets.
+  - `rea-tool-design`: Design or modify REA tools, CLI/MCP contracts, and Evidence semantics.
+  - `rea-analysis-optimization`: Optimize analysis workflows for context, latency, CPU, and memory.
+  - `rea-ci-tests-audit`: Audit CI and test suites for correctness, fixture drift, and measured performance.
+  - `rea-changelog-update`: Changelog preparation from Git history with contributor attribution.
 
 ### Priority 3: 7 Craft Applications Fidelity Audit & Strengthening
 - **Upstream Audit:** Researched the upstream **ArtCraft** organization ([`github.com/storytold`](https://github.com/storytold)) and its suite (`pdfcraft`, `photocraft`, `filmcraft`, `wordcraft`, `deckcraft`, `gridcraft`, `soundcraft`). Documented the Rust/egui/WASM architecture and mapped data models to browser-native standards in `CRAFT_FIDELITY_AUDIT.md`.
@@ -46,8 +83,15 @@
   - Added window `blur` and pointer lock release handlers to reset input keys and firing state, preventing continuous sliding.
 - **Visual Assets & Articulated Models:**
   - Replaced flat solid box geometry with procedurally generated high-detail Canvas2D textures: Bunker Floor (expansion seams & aggregate), Bunker Walls (horizontal masonry courses & water streaks), Hazard Pillars (diagonal warning bands), and Military Supply Crates (wood planks, steel brackets, stenciled markings).
-  - Built multi-part 3D viewmodels for all 3 weapons (M1911 Pistol, Trench Shotgun, Assault Rifle) with dynamic switching on slot selection.
+  - Built multi-part 3D viewmodels for all 5 weapons (M1911 Pistol, Trench Shotgun, Assault Rifle, Ray Gun, Heavy Machine Gun) with dynamic switching on slot selection.
   - Upgraded zombie meshes into articulated hierarchical groups with jointed neck, shoulder, and hip pivots, executing authentic limping stride animations, reaching arm clawing, and head twitches during pursuit.
+- **Call of Duty Zombies Mechanics (inspired by CoD / NZPortable):**
+  - **Wonder Weapon (Ray Gun):** 3D crimson viewmodel, firing emerald green plasma blasts with explosive splash damage and procedural Web Audio laser chirp sweeps.
+  - **Heavy Machine Gun (HMG):** Rapid-fire suppressive automatic weapon with 60-round drum magazine.
+  - **Mystery Box:** Interactive 3D crate with glowing `??` symbols and interior light. 950 pts roulette with 3.5s weapon cycling animation, sound jingle, weighted probabilities, and 10s collection window.
+  - **Perk Machines:** Speed Cola (3000 pts, cuts reload duration in half) and Juggernog (2500 pts, expands health to 250 HP).
+  - **Power-Up Drops (15% drop rate):** Max Ammo (reserves refilled), Insta-Kill (1-hit kills for 30s), Nuke (screen flash, smart bomb detonation, +400 pts), Double Points (2x score for 30s). Modeled as rotating 3D emblems with aura rings and point lights, 6s despawn blinking, HUD announcer banner, and badge countdown timers.
+  - **Authentic CoD Round Tally Marks:** Rounds 1–5 rendered as chalk hash marks (`I`, `II`, `III`, `IIII`, `<span class="tally-slash">IIII</span>`), rounds 6+ rendered in classic blood-red stencil numerals.
 - **Documentation:** Created `GAME_ASSETS_AND_LICENSES.md` detailing asset generation algorithms, Three.js shaders, Web Audio synthesizer architectures, and MIT/CC0 open-source licensing.
 
 ---
@@ -72,7 +116,7 @@
 | **DeckCraft** | **Implemented** | Slide Studio | 16:9 widescreen canvas, multi-slide thumbnails, draggable text/shapes/images, fullscreen presenter mode (F5), PPTXGenJS export | Yes |
 | **GridCraft** | **Implemented** | Spreadsheet Suite | 100x26 cell grid, formula engine (=SUM, =AVERAGE, =COUNT, =MIN, =MAX, =IF), formatting, multi-sheet tabs, XLSX/CSV export | Yes |
 | **SoundCraft** | **Implemented** | Audio DAW | 4-track timeline, waveform rendering, live mic recording, 3-band EQ, space reverb, master FFT spectrum visualizer, 16-bit PCM WAV export | Yes |
-| **Zombies3D** | **Implemented** | 3D Survival Game | Three.js bunker arena, first-person controller, round zombie spawner, raycast shooting, M1911/Shotgun/Rifle, wall buys, procedural Web Audio SFX | Yes |
+| **Zombies3D** | **Implemented** | 3D Survival Game | Three.js bunker arena, first-person controller, round zombie spawner, raycast shooting, M1911/Shotgun/Rifle/RayGun/HMG, perks (Juggernog & Speed Cola), mystery box, power-ups, procedural Web Audio SFX | Yes |
 
 ---
 
@@ -123,12 +167,17 @@
 ### 4. 3D Zombies Survival Game (`Zombies3D/`)
 - **Engine:** Three.js 3D rendering pipeline running 100% locally from bundled `lib/three.min.js`.
 - **Arena:** Dark, atmospheric 50x50m underground bunker with emergency red beacon, corner lamps, support pillars, crates, and volumetric fog.
-- **First-Person Controller:** Pointer Lock Controls with mouse look, WASD movement, Sprint (`Shift`), Jump (`Space`), and collision detection against arena walls and pillars.
-- **Zombies AI:** Round-based spawner with progressive difficulty, zombie health, speed, and spawn counts per round. Humanoid 3D meshes with glowing yellow eyes, limping animation cycle, path pursuit, and melee attacks.
-- **Weapons Arsenal:** M1911 Pistol, Trench Shotgun, and Assault Rifle. Raycast shooting with headshot damage multiplier, recoil kick, muzzle flash, spark particles, ammo counter, and reload timer (`R`).
-- **Economy & Wall Buys:** Points system (+10 per hit, +60 per kill, +100 per headshot). Wall buy stations for Trench Shotgun (500 pts), Assault Rifle (1200 pts), Ammo, and Juggernog perk machine (250 HP, 2500 pts).
-- **Sound & Audio:** 100% procedural Web Audio API synthesis (gunshots, reload, zombie growls, melee hits, damage grunts, round start sting, purchase chimes) — zero external audio files needed.
-- **HUD:** Round indicator, points counter, crosshair with dynamic hitmarker (white for body, red for headshot), health bar, weapon & ammo display, and Game Over screen with stats and restart.
+- **First-Person Controller:** Pointer Lock Controls with mouse look, WASD movement, Sprint (`Shift`), Jump (`Space`), and collision detection against arena walls and pillars. Strict `YXZ` Euler orientation eliminates camera roll or crosshair misalignment.
+- **Zombies AI:** Round-based spawner with progressive difficulty, zombie health, speed, and spawn counts per round. Articulated humanoid 3D meshes with glowing yellow eyes, jointed limping animation cycle, path pursuit, and melee attacks.
+- **Weapons Arsenal:** M1911 Pistol, Trench Shotgun, Assault Rifle, Ray Gun (wonder weapon with splash damage), and Heavy Machine Gun (60-round drum magazine). Raycast shooting with headshot damage multiplier, recoil kick, muzzle flash, spark particles, ammo counter, and reload timer (`R`).
+- **Economy, Wall Buys, Perks & Mystery Box:**
+  - Points system (+10 per hit, +60 per kill, +100 per headshot, +400 for Nuke, 2x during Double Points).
+  - Wall buy stations for Trench Shotgun (500 pts), Assault Rifle (1200 pts), Ammo refill.
+  - Perk machines: Juggernog (2500 pts, expands max HP to 250) and Speed Cola (3000 pts, cuts reload duration in half).
+  - Mystery Box: 3D interactive crate (950 pts) with animated lid opening, cycling weapon roulette, weighted probabilities, and 10s collection window.
+- **Power-Up Drops (15% drop rate):** Max Ammo (reserves refilled), Insta-Kill (1-hit kills for 30s), Nuke (kills active zombies + 400 pts + white screen flash), Double Points (2x score for 30s). Modeled as rotating 3D emblems with aura rings, point lights, 6s despawn blinking, HUD announcer banner, and badge countdown timers.
+- **Sound & Audio:** 100% procedural Web Audio API synthesis (gunshots, reload, zombie growls, melee hits, damage grunts, round start sting, purchase chimes, Ray Gun plasma chirp, mystery box jingle, power-up arpeggios, and nuke detonation) — zero external audio files needed.
+- **HUD:** Round indicator with authentic chalk tally marks (`I`, `II`, `III`, `IIII`, `<span class="tally-slash">IIII</span>`, red numbers for round 6+), points counter, crosshair with dynamic hitmarker (white for body, red for headshot), health bar, weapon & ammo display, power-up badges, and Game Over screen with stats and restart.
 
 ---
 

@@ -18,11 +18,15 @@
 
   <!-- FPS HUD -->
   <div class="hud-overlay">
-    <!-- Top Left Round Indicator -->
+    <!-- Top Left Round Indicator & Active Powerups -->
     <div class="round-indicator">
       <span class="round-label">ROUND</span>
-      <span id="roundNum" class="round-number">1</span>
+      <span id="roundNum" class="round-number">I</span>
+      <div id="activePowerups" class="active-powerups"></div>
     </div>
+
+    <!-- Powerup Announcer Banner -->
+    <div id="powerupAnnouncer" class="powerup-announcer hidden">MAX AMMO!</div>
 
     <!-- Top Navigation / Home Link -->
     <div style="position: absolute; top: 24px; left: 50%; transform: translateX(-50%); pointer-events: auto;">

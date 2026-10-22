@@ -365,3 +365,76 @@ body {
   font-weight: 800;
   color: #fff;
 }
+
+/* Powerup Announcer Banner */
+.powerup-announcer {
+  position: absolute;
+  top: 18%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 2.2rem;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  color: #38bdf8;
+  text-shadow: 0 0 20px rgba(56, 189, 248, 0.8), 0 0 40px rgba(56, 189, 248, 0.4);
+  animation: powerupPop 1.8s ease-out forwards;
+  pointer-events: none;
+  z-index: 30;
+  text-align: center;
+}
+
+@keyframes powerupPop {
+  0% { transform: translateX(-50%) scale(0.5); opacity: 0; }
+  20% { transform: translateX(-50%) scale(1.15); opacity: 1; }
+  80% { transform: translateX(-50%) scale(1.0); opacity: 1; }
+  100% { transform: translateX(-50%) scale(0.9); opacity: 0; }
+}
+
+/* Active Power-Ups Row */
+.active-powerups {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+.active-powerup-badge {
+  background: rgba(56, 189, 248, 0.18);
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  color: #38bdf8;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  animation: pulsePowerup 1s infinite alternate;
+}
+.active-powerup-badge.instakill {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #f87171;
+}
+.active-powerup-badge.doublepoints {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.6);
+  color: #fbbf24;
+}
+
+@keyframes pulsePowerup {
+  from { opacity: 0.7; }
+  to { opacity: 1.0; }
+}
+
+.tally-slash {
+  position: relative;
+  display: inline-block;
+}
+.tally-slash::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -4px;
+  right: -4px;
+  height: 4px;
+  background: #dc2626;
+  transform: rotate(-25deg);
+  box-shadow: 0 0 12px rgba(220, 38, 38, 0.8);
+}

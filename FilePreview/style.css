@@ -6,28 +6,36 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
-  padding: 12px 16px 16px;
-  gap: 12px;
+  background: var(--bg-base);
+  background-image: var(--bg-gradient);
+  background-attachment: fixed;
+  color: var(--text-main);
+  font-family: var(--font-sans);
 }
 
-header {
+.top-bar-container {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 0 4px;
+  padding: 8px 16px;
+  height: 48px;
+  min-height: 48px;
+  flex-shrink: 0;
+  z-index: 10;
+  position: relative;
 }
 
-.upload-controls {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
+.nav-pill-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
 }
 
-.mobile-toggle-btn {
+.mobile-only {
   display: none;
 }
 
@@ -36,7 +44,19 @@ header {
   flex: 1;
   gap: 14px;
   overflow: hidden;
-  height: calc(100vh - 80px);
+  padding: 0 16px 16px;
+  min-height: 0;
+}
+
+.sidebar-upload-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.sidebar-upload-actions .btn {
+  flex: 1;
+  font-size: 0.8rem;
+  padding: 8px 10px;
 }
 
 /* Sidebar */
@@ -267,32 +287,39 @@ header {
 
 /* Mobile & Android responsiveness */
 @media (max-width: 768px) {
-  body {
-    padding: 8px;
-  }
   .hide-mobile {
     display: none !important;
   }
-  .mobile-toggle-btn {
-    display: inline-flex;
+  .mobile-only {
+    display: flex;
   }
   .app-body {
+    padding: 0 8px 8px;
+    height: calc(100vh - 48px);
     position: relative;
-    height: calc(100vh - 90px);
   }
   .sidebar {
     position: absolute;
-    inset: 0 auto 0 0;
-    width: 80%;
-    max-width: 300px;
+    top: 0;
+    bottom: 8px;
+    left: 8px;
+    width: 82%;
+    max-width: 320px;
     z-index: 100;
-    background: rgba(22, 20, 19, 0.96);
+    background: var(--glass-bg-floating, rgba(28, 28, 34, 0.96));
     backdrop-filter: blur(28px);
     -webkit-backdrop-filter: blur(28px);
-    transform: translateX(-105%);
+    transform: translateX(-110%);
     box-shadow: 10px 0 30px rgba(0, 0, 0, 0.6);
   }
   .sidebar.open {
     transform: translateX(0);
+  }
+}
+
+@media (max-width: 480px) {
+  .top-bar-container .status-indicator,
+  .top-bar-container .nav-pipe-mobile-hide {
+    display: none;
   }
 }

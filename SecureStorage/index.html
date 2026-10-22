@@ -9,26 +9,22 @@
 </head>
 <body>
 
-<!-- Top Navigation Bar -->
-<div class="top-bar">
+<!-- Top Navigation Pill Bar -->
+<div class="top-bar-container">
   <div class="nav-pill-bar">
     <a href="../index.html" class="nav-pill-item" title="Back to Sigma Home">⌂ Home</a>
     <span style="color: rgba(255,255,255,0.2);">|</span>
-    <div class="toggle-container">
-      <label class="switch" title="Toggle between PassMan and ZIPEncrypt">
-        <input type="checkbox" id="pageToggle">
-        <span class="slider round"></span>
-      </label>
-      <a id="toggleLabel" class="toggle-text" href="ZIPencrypt.html" style="text-decoration: none;">PassMan</a>
-    </div>
-    <span style="color: rgba(255,255,255,0.2);">|</span>
+    <span class="nav-pill-item active">🔐 PassMan</span>
+    <a href="ZIPencrypt.html" class="nav-pill-item" title="Switch to ZIPEncrypt">🗜️ ZIPEncrypt</a>
+    <span style="color: rgba(255,255,255,0.2);" class="nav-pipe-mobile-hide">|</span>
     <span class="status-indicator">
       <span class="status-dot online"></span>
-      <span style="font-size: 0.8rem; color: var(--text-muted);">Local &amp; Offline</span>
+      <span style="font-size: 0.8rem; color: var(--text-muted);">AES-GCM Local</span>
     </span>
   </div>
 </div>
 
+<div class="main-container">
 <div id="page1" class="page-view">
   <div class="header-section">
     <h1><span class="header-icon">🔐</span> SecureStorage</h1>
@@ -129,6 +125,7 @@
 <div id="page2" class="page-view" style="display: none;">
   <!-- Fallback if toggled dynamically -->
 </div>
+</div><!-- /.main-container -->
 
 <!-- ==================== Encrypted ZIP Password Prompt Modal ==================== -->
 <div class="modal-overlay" id="zipPasswordModal">

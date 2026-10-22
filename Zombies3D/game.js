@@ -172,6 +172,56 @@
       gain.connect(audioCtx.destination);
       osc.start(now);
       osc.stop(now + 0.3);
+    } else if (type === "raygun") {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(1400, now);
+      osc.frequency.exponentialRampToValueAtTime(120, now + 0.2);
+      gain.gain.setValueAtTime(0.8, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.2);
+    } else if (type === "powerup") {
+      [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+        gain.gain.setValueAtTime(0.4, now + idx * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.08 + 0.4);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now + idx * 0.08);
+        osc.stop(now + idx * 0.08 + 0.4);
+      });
+    } else if (type === "nuke") {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(120, now);
+      osc.frequency.exponentialRampToValueAtTime(20, now + 1.2);
+      gain.gain.setValueAtTime(1.5, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 1.2);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 1.2);
+    } else if (type === "mysterybox") {
+      [330, 392, 493.88, 587.33, 659.25].forEach((freq, idx) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+        gain.gain.setValueAtTime(0.3, now + idx * 0.06);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.06 + 0.2);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now + idx * 0.06);
+        osc.stop(now + idx * 0.06 + 0.2);
+      });
     }
   }
 
@@ -452,7 +502,7 @@
     obstacles.push({ x: cx, z: cz, radius: 1.5 });
   });
 
-  // Wall Buys Setup
+  // Wall Buys & Perks Setup
   const wallBuys = [
     {
       id: "shotgun",
@@ -476,9 +526,19 @@
       id: "juggernog",
       name: "Juggernog (250 HP)",
       isPerk: true,
+      perkType: "juggernog",
       cost: 2500,
       pos: new THREE.Vector3(-24.4, 1.8, 0),
       color: 0xef4444
+    },
+    {
+      id: "speedcola",
+      name: "Speed Cola (Fast Reload)",
+      isPerk: true,
+      perkType: "speedcola",
+      cost: 3000,
+      pos: new THREE.Vector3(0, 1.8, 24.4),
+      color: 0x10b981
     }
   ];
 
@@ -495,6 +555,7 @@
   // Weapon Definitions
   const WEAPONS = [
     {
+      id: 0,
       name: "M1911 PISTOL",
       damage: 35,
       magSize: 8,
@@ -508,6 +569,7 @@
       sound: "pistol"
     },
     {
+      id: 1,
       name: "TRENCH SHOTGUN",
       damage: 25,
       magSize: 6,
@@ -522,6 +584,7 @@
       sound: "shotgun"
     },
     {
+      id: 2,
       name: "ASSAULT RIFLE",
       damage: 45,
       magSize: 30,
@@ -530,6 +593,34 @@
       maxReserve: 240,
       fireRate: 110,
       reloadTime: 1500,
+      isAuto: true,
+      pellets: 1,
+      sound: "rifle"
+    },
+    {
+      id: 3,
+      name: "RAY GUN",
+      damage: 300,
+      magSize: 20,
+      mag: 20,
+      reserve: 160,
+      maxReserve: 160,
+      fireRate: 200,
+      reloadTime: 2000,
+      isAuto: false,
+      pellets: 1,
+      sound: "raygun"
+    },
+    {
+      id: 4,
+      name: "HEAVY MACHINE GUN",
+      damage: 55,
+      magSize: 60,
+      mag: 60,
+      reserve: 300,
+      maxReserve: 300,
+      fireRate: 90,
+      reloadTime: 2800,
       isAuto: true,
       pellets: 1,
       sound: "rifle"
@@ -545,6 +636,9 @@
     health: 100,
     maxHealth: 100,
     hasJuggernog: false,
+    hasSpeedCola: false,
+    instaKillUntil: 0,
+    doublePointsUntil: 0,
     points: 500,
     inventory: [0], // weapons owned
     currentWeaponIdx: 0,
@@ -555,6 +649,181 @@
     headshots: 0,
     totalPointsEarned: 500
   };
+
+  // Mystery Box State & 3D Model
+  const mysteryBox = {
+    pos: new THREE.Vector3(-18, 0, -18),
+    cost: 950,
+    isSpinning: false,
+    offeredWeaponId: null,
+    offerExpiresAt: 0,
+    spinUntil: 0,
+    lastSpinTick: 0,
+    tempWeaponId: 0,
+    lidMesh: null,
+    light: null
+  };
+
+  const boxGroup = new THREE.Group();
+  boxGroup.position.copy(mysteryBox.pos);
+  const boxBase = new THREE.Mesh(
+    new THREE.BoxGeometry(2.4, 0.9, 1.3),
+    new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.85, metalness: 0.2 })
+  );
+  boxBase.position.y = 0.45;
+  boxGroup.add(boxBase);
+
+  const boxLid = new THREE.Mesh(
+    new THREE.BoxGeometry(2.45, 0.25, 1.35),
+    new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.7 })
+  );
+  boxLid.position.y = 0.95;
+  boxGroup.add(boxLid);
+  mysteryBox.lidMesh = boxLid;
+
+  const qMark1 = new THREE.Mesh(
+    new THREE.BoxGeometry(0.35, 0.05, 0.35),
+    new THREE.MeshBasicMaterial({ color: 0xfbbf24 })
+  );
+  qMark1.position.set(-0.5, 1.1, 0);
+  boxGroup.add(qMark1);
+  const qMark2 = new THREE.Mesh(
+    new THREE.BoxGeometry(0.35, 0.05, 0.35),
+    new THREE.MeshBasicMaterial({ color: 0xfbbf24 })
+  );
+  qMark2.position.set(0.5, 1.1, 0);
+  boxGroup.add(qMark2);
+
+  const boxLight = new THREE.PointLight(0x38bdf8, 0, 8);
+  boxLight.position.set(0, 1.2, 0);
+  boxGroup.add(boxLight);
+  mysteryBox.light = boxLight;
+
+  scene.add(boxGroup);
+  obstacles.push({ x: mysteryBox.pos.x, z: mysteryBox.pos.z, radius: 1.6 });
+
+  // Power-Ups System
+  const powerupTypes = [
+    { type: "MAX AMMO", color: 0x10b981, label: "MAX AMMO!" },
+    { type: "INSTA-KILL", color: 0xef4444, label: "INSTA-KILL!" },
+    { type: "NUKE", color: 0xf59e0b, label: "KABOOM!" },
+    { type: "DOUBLE POINTS", color: 0xfacc15, label: "DOUBLE POINTS!" }
+  ];
+  let powerupsAlive = [];
+
+  function spawnPowerUp(pos) {
+    const pType = powerupTypes[Math.floor(Math.random() * powerupTypes.length)];
+    const pGroup = new THREE.Group();
+    pGroup.position.set(pos.x, 1.0, pos.z);
+
+    const geo = new THREE.OctahedronGeometry(0.45);
+    const mat = new THREE.MeshStandardMaterial({
+      color: pType.color,
+      emissive: pType.color,
+      emissiveIntensity: 0.6,
+      roughness: 0.2
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    pGroup.add(mesh);
+
+    const ringGeo = new THREE.TorusGeometry(0.65, 0.04, 8, 24);
+    const ringMat = new THREE.MeshBasicMaterial({ color: pType.color, wireframe: true });
+    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+    ringMesh.rotation.x = Math.PI / 2;
+    pGroup.add(ringMesh);
+
+    const pLight = new THREE.PointLight(pType.color, 1.5, 6);
+    pGroup.add(pLight);
+
+    scene.add(pGroup);
+
+    powerupsAlive.push({
+      type: pType.type,
+      label: pType.label,
+      group: pGroup,
+      spawnTime: performance.now(),
+      expiresAt: performance.now() + 30000
+    });
+  }
+
+  function showPowerupBanner(text) {
+    const el = document.getElementById("powerupAnnouncer");
+    if (!el) return;
+    el.textContent = text;
+    el.classList.remove("hidden");
+    el.style.animation = "none";
+    el.offsetHeight; // trigger reflow
+    el.style.animation = "powerupPop 2.0s ease-out forwards";
+    setTimeout(() => {
+      el.classList.add("hidden");
+    }, 2000);
+  }
+
+  function updatePowerups(dt, now) {
+    for (let i = powerupsAlive.length - 1; i >= 0; i--) {
+      const p = powerupsAlive[i];
+      p.group.rotation.y += dt * 2.5;
+      p.group.position.y = 1.0 + Math.sin(now * 0.004) * 0.15;
+
+      const timeLeft = (p.expiresAt - now) / 1000;
+      if (timeLeft <= 0) {
+        scene.remove(p.group);
+        powerupsAlive.splice(i, 1);
+        continue;
+      }
+
+      if (timeLeft < 6) {
+        p.group.visible = Math.floor(now / 150) % 2 === 0;
+      } else {
+        p.group.visible = true;
+      }
+
+      const dist = Math.hypot(player.pos.x - p.group.position.x, player.pos.z - p.group.position.z);
+      if (dist < 2.0) {
+        scene.remove(p.group);
+        powerupsAlive.splice(i, 1);
+        playSound("powerup");
+        showPowerupBanner(p.label);
+
+        if (p.type === "MAX AMMO") {
+          WEAPONS.forEach((w) => {
+            w.reserve = w.maxReserve;
+          });
+          updateWeaponHUD();
+        } else if (p.type === "INSTA-KILL") {
+          player.instaKillUntil = now + 30000;
+          updateActivePowerupsHUD();
+        } else if (p.type === "NUKE") {
+          playSound("nuke");
+          damageVignette.style.boxShadow = "inset 0 0 200px 100px rgba(255, 255, 255, 0.9)";
+          setTimeout(() => { damageVignette.style.boxShadow = ""; }, 350);
+
+          const toKill = [...zombiesAlive];
+          toKill.forEach((z) => killZombie(z, false));
+          addPoints(400);
+        } else if (p.type === "DOUBLE POINTS") {
+          player.doublePointsUntil = now + 30000;
+          updateActivePowerupsHUD();
+        }
+      }
+    }
+  }
+
+  function updateActivePowerupsHUD() {
+    const container = document.getElementById("activePowerups");
+    if (!container) return;
+    const now = performance.now();
+    let html = "";
+    if (player.instaKillUntil > now) {
+      const sec = Math.ceil((player.instaKillUntil - now) / 1000);
+      html += `<span class="active-powerup-badge instakill">💀 INSTA-KILL (${sec}s)</span>`;
+    }
+    if (player.doublePointsUntil > now) {
+      const sec = Math.ceil((player.doublePointsUntil - now) / 1000);
+      html += `<span class="active-powerup-badge doublepoints">2X POINTS (${sec}s)</span>`;
+    }
+    container.innerHTML = html;
+  }
 
   // 3D Gun Viewmodel attached to Camera
   const gunGroup = new THREE.Group();
@@ -927,16 +1196,18 @@
 
         if (z && !hitZombies.includes(z)) {
           hitZombies.push(z);
-          const dmg = isHead ? weapon.damage * 3 : weapon.damage;
+          const isInsta = player.instaKillUntil > performance.now();
+          const dmg = isInsta ? z.hp : (isHead ? weapon.damage * 3 : weapon.damage);
           z.hp -= dmg;
 
-          showHitmarker(isHead);
+          showHitmarker(isHead || isInsta);
           playSound(isHead ? "headshot" : "hit");
 
           if (z.hp <= 0) {
             killZombie(z, isHead);
           } else {
-            addPoints(10);
+            const hitPts = player.doublePointsUntil > performance.now() ? 20 : 10;
+            addPoints(hitPts);
           }
         }
       }
@@ -961,6 +1232,8 @@
     player.isReloading = true;
     playSound("reload");
 
+    const reloadDuration = player.hasSpeedCola ? weapon.reloadTime * 0.5 : weapon.reloadTime;
+
     setTimeout(() => {
       const needed = weapon.magSize - weapon.mag;
       const taking = Math.min(needed, weapon.reserve);
@@ -968,7 +1241,7 @@
       weapon.reserve -= taking;
       player.isReloading = false;
       updateWeaponHUD();
-    }, weapon.reloadTime);
+    }, reloadDuration);
   }
 
   // Kill Zombie
@@ -979,8 +1252,16 @@
     player.kills++;
     if (isHeadshot) player.headshots++;
 
-    const earned = isHeadshot ? 100 : 60;
+    let earned = isHeadshot ? 100 : 60;
+    if (player.doublePointsUntil > performance.now()) {
+      earned *= 2;
+    }
     addPoints(earned);
+
+    // 15% Chance to spawn a Power-Up drop
+    if (Math.random() < 0.15) {
+      spawnPowerUp(z.mesh.position);
+    }
 
     // Check Round Completion
     if (zombiesAlive.length === 0 && zombiesSpawnedInRound >= zombiesRemainingInRound) {
@@ -1003,19 +1284,64 @@
 
   function advanceRound() {
     round++;
-    roundNumEl.textContent = round;
+    updateRoundHUD(round);
     zombiesRemainingInRound = 5 + round * 4;
     zombiesSpawnedInRound = 0;
     roundIntermission = false;
     playSound("round");
   }
 
+  function updateRoundHUD(r) {
+    if (r === 1) roundNumEl.innerHTML = "I";
+    else if (r === 2) roundNumEl.innerHTML = "II";
+    else if (r === 3) roundNumEl.innerHTML = "III";
+    else if (r === 4) roundNumEl.innerHTML = "IIII";
+    else if (r === 5) roundNumEl.innerHTML = '<span class="tally-slash">IIII</span>';
+    else roundNumEl.innerHTML = `<span style="color:#dc2626;">${r}</span>`;
+  }
+
   // Wall Buy & Interaction
   function handleInteract() {
+    // 1. Mystery Box Interaction
+    if (camera.position.distanceTo(mysteryBox.pos) < 3.5) {
+      if (mysteryBox.offeredWeaponId !== null) {
+        // Take offered weapon
+        const wid = mysteryBox.offeredWeaponId;
+        mysteryBox.offeredWeaponId = null;
+        mysteryBox.light.intensity = 0;
+        mysteryBox.lidMesh.position.y = 0.95;
+
+        if (player.inventory.includes(wid)) {
+          // Already owns, refill ammo
+          WEAPONS[wid].reserve = WEAPONS[wid].maxReserve;
+        } else if (player.inventory.length >= 2) {
+          // Replace current weapon
+          player.inventory[player.currentWeaponIdx] = wid;
+        } else {
+          player.inventory.push(wid);
+          player.currentWeaponIdx = player.inventory.length - 1;
+        }
+        playSound("buy");
+        updateWeaponHUD();
+        return;
+      } else if (!mysteryBox.isSpinning && player.points >= mysteryBox.cost) {
+        // Spin mystery box
+        player.points -= mysteryBox.cost;
+        pointsValEl.textContent = player.points;
+        mysteryBox.isSpinning = true;
+        mysteryBox.spinUntil = performance.now() + 3500;
+        mysteryBox.lidMesh.position.y = 1.6;
+        mysteryBox.light.intensity = 2.5;
+        playSound("mysterybox");
+        return;
+      }
+    }
+
+    // 2. Wall Buys & Perks Interaction
     wallBuys.forEach((wb) => {
       if (camera.position.distanceTo(wb.pos) < 3.2) {
         if (wb.isPerk) {
-          if (!player.hasJuggernog && player.points >= wb.cost) {
+          if (wb.perkType === "juggernog" && !player.hasJuggernog && player.points >= wb.cost) {
             player.points -= wb.cost;
             player.hasJuggernog = true;
             player.maxHealth = 250;
@@ -1024,14 +1350,23 @@
             updateHealthHUD();
             pointsValEl.textContent = player.points;
             renderPerks();
+          } else if (wb.perkType === "speedcola" && !player.hasSpeedCola && player.points >= wb.cost) {
+            player.points -= wb.cost;
+            player.hasSpeedCola = true;
+            playSound("buy");
+            pointsValEl.textContent = player.points;
+            renderPerks();
           }
         } else {
-          // Weapon
           const alreadyOwns = player.inventory.includes(wb.weaponId);
           if (!alreadyOwns && player.points >= wb.cost) {
             player.points -= wb.cost;
-            player.inventory.push(wb.weaponId);
-            player.currentWeaponIdx = player.inventory.length - 1;
+            if (player.inventory.length >= 2) {
+              player.inventory[player.currentWeaponIdx] = wb.weaponId;
+            } else {
+              player.inventory.push(wb.weaponId);
+              player.currentWeaponIdx = player.inventory.length - 1;
+            }
             playSound("buy");
             updateWeaponHUD();
             pointsValEl.textContent = player.points;
@@ -1050,13 +1385,17 @@
     });
   }
 
-  // Check Nearby Wall Buy for Center Prompt
+  // Check Nearby Wall Buy & Mystery Box for Center Prompt
   function checkInteractionPrompt() {
     let promptText = null;
+
+    // 1. Check Wall Buys & Perks
     wallBuys.forEach((wb) => {
       if (camera.position.distanceTo(wb.pos) < 3.2) {
         if (wb.isPerk) {
-          if (!player.hasJuggernog) {
+          if (wb.perkType === "juggernog" && !player.hasJuggernog) {
+            promptText = `Press F to Buy ${wb.name} [${wb.cost} pts]`;
+          } else if (wb.perkType === "speedcola" && !player.hasSpeedCola) {
             promptText = `Press F to Buy ${wb.name} [${wb.cost} pts]`;
           }
         } else {
@@ -1069,6 +1408,19 @@
         }
       }
     });
+
+    // 2. Check Mystery Box
+    if (camera.position.distanceTo(mysteryBox.pos) < 3.5) {
+      if (mysteryBox.isSpinning) {
+        const tempW = WEAPONS[mysteryBox.tempWeaponId || 0];
+        promptText = `Cycling... [${tempW ? tempW.name : "???"}]`;
+      } else if (mysteryBox.offeredWeaponId !== null) {
+        const offW = WEAPONS[mysteryBox.offeredWeaponId];
+        promptText = `Press F to Take [${offW.name}]`;
+      } else {
+        promptText = `Press F for Mystery Box [${mysteryBox.cost} pts]`;
+      }
+    }
 
     if (promptText) {
       centerPrompt.textContent = promptText;
@@ -1098,6 +1450,14 @@
       const p = document.createElement("div");
       p.className = "perk-badge";
       p.textContent = "🛡 JUGGERNOG";
+      perksContainer.appendChild(p);
+    }
+    if (player.hasSpeedCola) {
+      const p = document.createElement("div");
+      p.className = "perk-badge";
+      p.style.borderColor = "rgba(16, 185, 129, 0.4)";
+      p.style.color = "#34d399";
+      p.textContent = "⚡ SPEED COLA";
       perksContainer.appendChild(p);
     }
   }
@@ -1146,6 +1506,17 @@
     player.health = 100;
     player.maxHealth = 100;
     player.hasJuggernog = false;
+    player.hasSpeedCola = false;
+    player.instaKillUntil = 0;
+    player.doublePointsUntil = 0;
+    updateActivePowerupsHUD();
+    powerupsAlive.forEach(p => scene.remove(p.group));
+    powerupsAlive = [];
+    mysteryBox.isSpinning = false;
+    mysteryBox.offeredWeaponId = null;
+    if (mysteryBox.light) mysteryBox.light.intensity = 0;
+    if (mysteryBox.lidMesh) mysteryBox.lidMesh.position.y = 0.95;
+
     player.points = 500;
     player.kills = 0;
     player.headshots = 0;
@@ -1160,6 +1531,10 @@
     WEAPONS[1].reserve = 30;
     WEAPONS[2].mag = 30;
     WEAPONS[2].reserve = 120;
+    WEAPONS[3].mag = 20;
+    WEAPONS[3].reserve = 160;
+    WEAPONS[4].mag = 60;
+    WEAPONS[4].reserve = 300;
 
     pointsValEl.textContent = player.points;
     renderPerks();
@@ -1280,6 +1655,37 @@
           }
         }
       });
+
+      // Update Powerup Pickups & Active Timers
+      updatePowerups(dt, now);
+      updateActivePowerupsHUD();
+
+      // Update Mystery Box Spin & Offering
+      if (mysteryBox.isSpinning) {
+        if (now - mysteryBox.lastSpinTick > 100) {
+          mysteryBox.lastSpinTick = now;
+          mysteryBox.tempWeaponId = Math.floor(Math.random() * WEAPONS.length);
+        }
+        if (now > mysteryBox.spinUntil) {
+          mysteryBox.isSpinning = false;
+          // Weighted random pick: Ray Gun 20%, Heavy Machine Gun 25%, Assault Rifle 25%, Trench Shotgun 20%, Pistol 10%
+          const r = Math.random();
+          let picked = 0;
+          if (r < 0.20) picked = 3;
+          else if (r < 0.45) picked = 4;
+          else if (r < 0.70) picked = 2;
+          else if (r < 0.90) picked = 1;
+          else picked = 0;
+
+          mysteryBox.offeredWeaponId = picked;
+          mysteryBox.offerExpiresAt = now + 10000;
+          playSound("powerup");
+        }
+      } else if (mysteryBox.offeredWeaponId !== null && now > mysteryBox.offerExpiresAt) {
+        mysteryBox.offeredWeaponId = null;
+        if (mysteryBox.light) mysteryBox.light.intensity = 0;
+        if (mysteryBox.lidMesh) mysteryBox.lidMesh.position.y = 0.95;
+      }
     }
 
     renderer.render(scene, camera);

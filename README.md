@@ -172,12 +172,14 @@ Sigma-Webapps/Main/index.html
 ### 7. Zombies3D (Call of Duty Zombies-Inspired FPS Survival)
 - **3D Engine:** Three.js 3D rendering pipeline running 100% offline from bundled `lib/three.min.js`.
 - **Atmosphere:** Underground bunker with emergency red beacon, corner lamps, support pillars, crates, and volumetric fog.
-- **Controls:** Pointer Lock mouse look, WASD movement, Sprint (`Shift`), Jump (`Space`), and collision detection.
-- **Zombies AI:** Round-based spawner with progressive difficulty, zombie health, speed, and spawn counts per round. Humanoid 3D meshes with glowing yellow eyes, limping animation cycle, path pursuit, and melee attacks.
-- **Weapons:** M1911 Pistol, Trench Shotgun, and Assault Rifle. Raycast shooting with headshot damage multiplier, recoil kick, muzzle flash, spark particles, ammo counter, and reload timer (`R`).
-- **Economy & Wall Buys:** Points system (+10 per hit, +60 per kill, +100 per headshot). Wall buy stations for Trench Shotgun (500 pts), Assault Rifle (1200 pts), Ammo, and Juggernog perk machine (250 HP, 2500 pts).
-- **Sound & Audio:** 100% procedural Web Audio API synthesis (gunshots, reload, zombie growls, melee hits, damage grunts, round start sting, purchase chimes) — zero external audio files needed.
-- **HUD:** Round indicator, points counter, crosshair with dynamic hitmarker (white for body, red for headshot), health bar, weapon & ammo display, and Game Over screen with stats and restart.
+- **Controls:** Pointer Lock mouse look, WASD movement, Sprint (`Shift`), Jump (`Space`), and collision detection. Strict `YXZ` Euler rotation eliminates camera roll and aligns raycast trajectory to crosshair.
+- **Zombies AI:** Round-based spawner with progressive difficulty, zombie health, speed, and spawn counts per round. Articulated humanoid 3D meshes with glowing yellow eyes, jointed limping animation cycle, path pursuit, and melee attacks.
+- **Arsenal:** M1911 Pistol, Trench Shotgun, Assault Rifle, Ray Gun (wonder weapon with splash damage and plasma effects), and Heavy Machine Gun (60-round drum magazine). Raycast shooting with headshot damage multiplier, recoil kick, muzzle flash, spark particles, ammo counter, and reload timer (`R`).
+- **Economy, Wall Buys & Mystery Box:** Points system (+10 per hit, +60 per kill, +100 per headshot, +400 for Nuke, 2x during Double Points). Wall buy stations for Trench Shotgun (500 pts), Assault Rifle (1200 pts), Ammo refill. 3D interactive Mystery Box (950 pts) with animated lid opening, cycling weapon roulette, and collection timer.
+- **Perk Machines:** Juggernog (2500 pts, increases health to 250 HP) and Speed Cola (3000 pts, cuts reload duration in half).
+- **Power-Up Drops (15% drop rate):** Max Ammo (reserves refilled), Insta-Kill (1-hit kills for 30s), Nuke (clears active zombies + 400 pts + white screen flash), Double Points (2x score for 30s). Modeled as rotating 3D emblems with aura rings, point lights, 6s despawn blinking, HUD announcer banner, and badge countdown timers.
+- **Sound & Audio:** 100% procedural Web Audio API synthesis (gunshots, reload, zombie growls, melee hits, damage grunts, round start sting, purchase chimes, Ray Gun plasma chirp, mystery box jingle, power-up arpeggios, and nuke detonation) — zero external audio files needed.
+- **HUD:** Round indicator with authentic chalk tally marks (`I`, `II`, `III`, `IIII`, `<span class="tally-slash">IIII</span>`, red numbers for round 6+), points counter, crosshair with dynamic hitmarker (white for body, red for headshot), health bar, weapon & ammo display, power-up badges, and Game Over screen with stats and restart.
 
 ---
 

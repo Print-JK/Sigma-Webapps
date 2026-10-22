@@ -12,6 +12,24 @@
   <script src="../../lib/pdf.min.js"></script>
 </head>
 <body>
+  <!-- Top Navigation Pill Bar -->
+  <div class="top-bar-container">
+    <div class="nav-pill-bar">
+      <button type="button" class="nav-pill-item nav-pill-btn" id="hamburger-btn" title="Toggle Settings Drawer">
+        ☰ Settings
+      </button>
+      <a href="../../index.html" class="nav-pill-item" title="Back to Sigma Home">⌂ Home</a>
+      <span style="color: rgba(255,255,255,0.2);">|</span>
+      <a href="../index.html" class="nav-pill-item" title="Back to FilePrev">📂 FilePrev</a>
+      <span class="nav-pill-item active">⚡ SpeedReader</span>
+      <span style="color: rgba(255,255,255,0.2);" class="nav-pipe-mobile-hide">|</span>
+      <span class="status-indicator">
+        <span class="status-dot online"></span>
+        <span style="font-size: 0.8rem; color: var(--text-muted);">RSVP / Scroll</span>
+      </span>
+    </div>
+  </div>
+
   <div id="wrapper">
     <div class="overlay" id="overlay"></div>
 
@@ -71,29 +89,14 @@
 
     <!-- Page Content Area -->
     <div id="page-content-wrapper">
-      <button type="button" class="hamburger animated fadeInLeft is-closed" id="hamburger-btn">
-        <span class="hamb-top"></span>
-        <span class="hamb-middle"></span>
-        <span class="hamb-bottom"></span>
-      </button>
 
       <div class="container">
         <header class="app-header">
-          <div class="nav-pill-bar" style="margin-bottom: 12px;">
-            <a href="../../index.html" class="nav-pill-item" title="Back to Sigma Home">⌂ Home</a>
-            <span style="color: rgba(255,255,255,0.2);">|</span>
-            <a href="../index.html" class="nav-pill-item" title="Back to FilePrev">📂 FilePrev</a>
-            <span class="nav-pill-item active">⚡ SpeedReader</span>
-            <span style="color: rgba(255,255,255,0.2);">|</span>
-            <span class="status-indicator">
-              <span class="status-dot online"></span>
-              <span style="font-size: 0.8rem; color: var(--text-muted);">RSVP / Scroll</span>
-            </span>
-          </div>
           <h1>Speed Reader</h1>
+          <p>RSVP focal point and continuous vertical speed reading studio</p>
         </header>
 
-        <main class="text-viewer">
+        <main class="text-viewer glass-card">
           <div class="viewer-header">
             <div class="file-info">
               <span id="active-source-name">No text loaded</span>

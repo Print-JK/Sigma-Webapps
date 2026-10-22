@@ -256,7 +256,7 @@
   // fail under the file:// origin in Chromium-based browsers. Surface it
   // up front instead of letting a tool look "broken" for no visible reason.
   // -------------------------------------------------------------------
-  if (window.location.protocol === "file:") {
+  if (window.location.protocol === "file:" && protocolBanner) {
     protocolBanner.classList.remove("hidden");
   }
 
@@ -281,7 +281,7 @@
       ["Converters", "converters/*.js"],
     ];
     const missing = required.filter(([globalName]) => typeof window[globalName] === "undefined");
-    if (missing.length > 0) {
+    if (missing.length > 0 && protocolBanner) {
       protocolBanner.classList.remove("hidden");
       protocolBanner.innerHTML =
         `⚠ Missing required file(s), so conversions will silently fail: ` +

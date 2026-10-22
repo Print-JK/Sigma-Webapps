@@ -18,6 +18,11 @@ This document records the 3D rendering pipeline, procedural texture generators, 
   - Frequency modulated oscillators with biquad filter sweeps for sub-bass shotgun punch and rifle bursts.
   - Synthetic harmonic bells for hitmarkers and headshot dings.
   - Pitch-diver and pink-noise sweeps for zombie groans and melee attacks.
+  - Plasma chirp frequency sweep with resonance filter for Ray Gun projectile discharge.
+  - Playful 7-tone cycling jingle with randomized pitch steps for Mystery Box weapon roulette.
+  - Ascending 4-tone harmonic arpeggio for Power-Up drops (Max Ammo, Insta-Kill, Nuke, Double Points).
+  - Sub-bass seismic detonation rumble with white-noise decay envelope for Nuke smart-bomb clearance.
+  - Jingle chimes for perk machine drink purchases (Juggernog and Speed Cola).
 
 ---
 
@@ -37,6 +42,12 @@ All visual assets and textures in `Zombies3D` are procedurally generated in-brow
 | **M1911 Pistol** | 3D Viewmodel | Multi-mesh group (dark metal slide, walnut grip, sights) | Compact military sidearm attached to camera viewport | MIT / CC0 |
 | **Trench Shotgun** | 3D Viewmodel | Multi-mesh group (dual barrel, wooden pump slide, stock) | Heavy close-quarters scattergun with wide pellet spread | MIT / CC0 |
 | **Assault Rifle** | 3D Viewmodel | Multi-mesh group (receiver, curved magazine, barrel shroud) | Fully automatic rapid-fire rifle with banana clip | MIT / CC0 |
+| **Ray Gun** | 3D Viewmodel | Multi-mesh group (crimson housing, bronze fins, dual barrel prongs) | Wonder weapon firing glowing green plasma spheres with splash damage | MIT / CC0 |
+| **Heavy Machine Gun** | 3D Viewmodel | Multi-mesh group (long perforated shroud, large drum magazine, carry handle) | High-capacity suppressive fire automatic weapon | MIT / CC0 |
+| **Mystery Box** | 3D Interactive Model | Wooden chest (`2.6m x 0.9m x 0.9m`) with brass corner brackets & glowing `??` symbols | CoD-authentic weapon roulette crate with lid animation and weapon cycling | MIT / CC0 |
+| **Juggernog Machine** | 3D Perk Dispenser | Red retro soda vending machine (`1.3m x 2.2m x 1.0m`) with glowing logo & illuminated coin slot | Increases maximum player health from 100 HP to 250 HP (Cost: 2500 pts) | MIT / CC0 |
+| **Speed Cola Machine** | 3D Perk Dispenser | Emerald green retro soda vending machine with glowing logo | Cuts reload duration by 50% across all weapons (Cost: 3000 pts) | MIT / CC0 |
+| **Power-Up Drops** | 3D Floating Entities | Rotating floating 3D emblems (Max Ammo, Insta-Kill, Nuke, Double Points) | 15% drop rate on zombie elimination, complete with glowing aura rings, 6s despawn blinking, and HUD badge timers | MIT / CC0 |
 
 ---
 

@@ -10,33 +10,22 @@
 <body>
 
   <!-- Top Navigation Pill Bar -->
-  <header>
+  <div class="top-bar-container">
     <div class="nav-pill-bar">
+      <button type="button" class="nav-pill-item mobile-only nav-pill-btn" id="sidebarToggleBtn" title="Toggle File Drawer">
+        ☰ Files
+      </button>
       <a href="../index.html" class="nav-pill-item" title="Back to Sigma Home">⌂ Home</a>
       <span style="color: rgba(255,255,255,0.2);">|</span>
       <span class="nav-pill-item active">📂 FilePrev</span>
-      <a class="nav-pill-item" href="SpeedReader/index.html" target="_blank" title="Launch SpeedReader">⚡ SpeedReader</a>
-      <span style="color: rgba(255,255,255,0.2);">|</span>
+      <a class="nav-pill-item" href="SpeedReader/index.html" title="Launch SpeedReader">⚡ SpeedReader</a>
+      <span style="color: rgba(255,255,255,0.2);" class="nav-pipe-mobile-hide">|</span>
       <span class="status-indicator">
         <span class="status-dot online"></span>
         <span style="font-size: 0.8rem; color: var(--text-muted);" class="hide-mobile">Local Offline</span>
       </span>
     </div>
-
-    <div class="upload-controls">
-      <button class="btn btn-secondary mobile-toggle-btn" id="sidebarToggleBtn" title="Toggle File List">
-        ☰ Files
-      </button>
-      <button class="btn btn-primary" onclick="document.getElementById('singleInput').click()" title="Choose a single file">
-        📄 Choose File
-      </button>
-      <button class="btn btn-glass" onclick="document.getElementById('folderInput').click()" title="Choose an entire directory">
-        📁 Choose Folder
-      </button>
-      <input type="file" id="singleInput" onchange="handleSingleFile(event)" style="display:none;" />
-      <input type="file" id="folderInput" webkitdirectory directory multiple onchange="handleFolderFiles(event)" style="display:none;" />
-    </div>
-  </header>
+  </div>
 
   <div class="app-body">
     <!-- Sidebar -->
@@ -44,6 +33,16 @@
       <div class="sidebar-header-row">
         <span class="sidebar-title">LOADED FILES</span>
         <span id="fileCountBadge" class="badge">0</span>
+      </div>
+      <div class="sidebar-upload-actions">
+        <button class="btn btn-primary" onclick="document.getElementById('singleInput').click()" title="Choose a single file">
+          📄 Choose File
+        </button>
+        <button class="btn btn-secondary" onclick="document.getElementById('folderInput').click()" title="Choose an entire directory">
+          📁 Folder
+        </button>
+        <input type="file" id="singleInput" onchange="handleSingleFile(event)" style="display:none;" />
+        <input type="file" id="folderInput" webkitdirectory directory multiple onchange="handleFolderFiles(event)" style="display:none;" />
       </div>
       <div class="file-tree" id="fileTree">
         <div class="empty-file-hint">Drop files or folders anywhere to preview.</div>
