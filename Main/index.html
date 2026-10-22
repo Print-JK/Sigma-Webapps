@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sigma Webapps</title>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: white;
+      line-height: 1.6;
+    }
+
+    /* NAVBAR */
+    .navbar {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      padding: 20px 60px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: bold;
+      letter-spacing: 2px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 30px;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: white;
+      transition: 0.3s;
+    }
+
+    .nav-links a:hover {
+      color: #bbb;
+    }
+
+    /* HERO */
+    .hero {
+      height: 100vh;
+      background:
+        linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)),
+        url("../assets/Home.gif") center/cover no-repeat;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .hero-content h1 {
+      font-size: 72px;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+    }
+
+    .hero-content p {
+      font-size: 20px;
+      color: #ddd;
+      margin-bottom: 30px;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 14px 32px;
+      border: 2px solid white;
+      color: white;
+      text-decoration: none;
+      border-radius: 50px;
+      transition: 0.3s;
+    }
+
+    .btn:hover {
+      background: white;
+      color: black;
+    }
+
+    /* SHOWCASE */
+    .section {
+      padding: 100px 60px;
+      background: #181818;
+    }
+
+    .section-title {
+      text-align: center;
+      font-size: 42px;
+      margin-bottom: 60px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 30px;
+    }
+
+    .card-link {
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .card {
+      background: #222;
+      border-radius: 12px;
+      overflow: hidden;
+      transition: 0.3s;
+    }
+
+    .card:hover {
+      transform: translateY(-8px);
+    }
+
+    .card img {
+      width: 100%;
+      display: block;
+    }
+
+    .card-content {
+      padding: 20px;
+    }
+
+    .card-content h3 {
+      margin-bottom: 10px;
+    }
+
+    .card-content p {
+      color: #bbb;
+    }
+
+    /* CTA */
+    .cta {
+      padding: 80px 20px;
+      text-align: center;
+      background: #0d0d0d;
+    }
+
+    .cta h2 {
+      font-size: 42px;
+      margin-bottom: 20px;
+    }
+
+    .cta p {
+      color: #bbb;
+      margin-bottom: 30px;
+    }
+
+    /* FOOTER */
+    footer {
+      text-align: center;
+      padding: 30px;
+      background: black;
+      color: #777;
+    }
+
+    /* MOBILE */
+    @media (max-width: 768px) {
+      .navbar {
+        padding: 20px;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .hero-content h1 {
+        font-size: 42px;
+      }
+
+      .hero-content p {
+        font-size: 16px;
+      }
+
+      .section {
+        padding: 80px 20px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="logo">Where Utilities Reside</div>
+  </nav>
+  
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-content">
+      <h2>Welcome To</h2>
+      <h1>Sigma Webapps</h1>
+    </div>
+  </section>
+
+  <!-- SHOWCASE -->
+  <section class="section">
+    <h2 class="section-title">Tools</h2>
+
+    <div class="grid">
+
+      <a href="../SecureStorage/index.html" class="card-link"> 
+        <div class="card">
+          <img src="../assets/passman.jpg" alt="SecureStorage">
+          <div class="card-content">
+            <h3>SecureStorage</h3>
+            <p>Includes ZIPencrypt and PassMan, where csv, psd, png, gif, jpg, pdf, mp4 files can be encrypted and decrypted.</p>
+          </div>
+        </div>
+      </a>
+
+      <a href="../FilePreview/index.html" class="card-link">
+        <div class="card">
+          <img src="../assets/fileprev.jpg" alt="FilePrev">
+          <div class="card-content">
+            <h3>FilePrev</h3>
+            <p>Previews Files of formats including png, jpg, gif, mp4, mp4, pdf, csv ,psd and more.</p>
+          </div>
+        </div>
+      </a>
+
+      <a href="../LocalOCR/index.html" class="card-link">
+        <div class="card">
+          <img src="../assets/OCR.png" alt="LocalOCR">
+          <div class="card-content">
+            <h3>LocalOCR</h3>
+            <p>An OCR that accpets and extracts texts for png ,jpg, webp, pdf, md, txt.</p>
+          </div>
+        </div>
+      </a>
+
+      <a href="../FileConvert/index.html" class="card-link">
+        <div class="card">
+          <img src="../assets/FileConvert.png" alt="FileConvert">
+          <div class="card-content">
+            <h3>FileConvert</h3>
+            <p>Converts files between various formats directly the browser.</p>
+          </div>
+        </div>
+      </a>
+
+      <a href="../RadioLocal/index.html" class="card-link">
+        <div class="card">
+          <img src="../assets/NCS.jpg" alt="RadioLocal">
+          <div class="card-content">
+            <h3>RadioLocal</h3>
+            <p>Local mp3 player, with traditional mp3 features and an additional filter function.</p>
+          </div>
+        </div>
+      </a>
+
+      <a href="../PdfCraft/index.html" class="card-link">
+        <div class="card">
+          <img src="../assets/pdfcraft.svg" alt="PdfCraft">
+          <div class="card-content">
+            <h3>PdfCraft</h3>
+            <p>Interactive PDF workbench with page rotation, merging, reordering, and vector drawing annotations.</p>
+          </div>
+        </div>
+      </a>
+
+      <a href="../PhotoCraft/index.html" class="card-link">
+        <div class="card">
+          <img src="../assets/photocraft.svg" alt="PhotoCraft">
+          <div class="card-content">
+            <h3>PhotoCraft</h3>
+            <p>Layered raster graphic editor with blend modes, drawing tools, color adjustments, and undo history.</p>
+          </div>
+        </div>
+      </a>
+
+      <a href="../FilmCraft/index.html" class="card-link">
+        <div class="card">
+          <img src="../assets/filmcraft.svg" alt="FilmCraft">
+          <div class="card-content">
+            <h3>FilmCraft</h3>
+            <p>Nonlinear video editing studio with multi-track timeline, clip slicing, overlay, and client-side export.</p>
+          </div>
+        </div>
+      </a>
+
+      <a href="../WordCraft/index.html" class="card-link">
+        <div class="card">
+          <img src="../assets/wordcraft.svg" alt="WordCraft">
+          <div class="card-content">
+            <h3>WordCraft</h3>
+            <p>Local word processor supporting Word (.docx), Markdown, HTML, print styling, and tables.</p>
+          </div>
+        </div>
+      </a>
+
+      <a href="../DeckCraft/index.html" class="card-link">
+        <div class="card">
+          <img src="../assets/deckcraft.svg" alt="DeckCraft">
+          <div class="card-content">
+            <h3>DeckCraft</h3>
+            <p>Slide deck presentation studio with interactive canvas, fullscreen presenter mode, and PPTX export.</p>
+          </div>
+        </div>
+      </a>
+
+      <a href="../GridCraft/index.html" class="card-link">
+        <div class="card">
+          <img src="../assets/gridcraft.svg" alt="GridCraft">
+          <div class="card-content">
+            <h3>GridCraft</h3>
+            <p>Spreadsheet editor with dynamic formula engine (=SUM, =AVERAGE, =IF), multi-sheets, and Excel (.xlsx) export.</p>
+          </div>
+        </div>
+      </a>
+
+      <a href="../SoundCraft/index.html" class="card-link">
+        <div class="card">
+          <img src="../assets/soundcraft.svg" alt="SoundCraft">
+          <div class="card-content">
+            <h3>SoundCraft</h3>
+            <p>Digital Audio Workstation (DAW) with multi-track mixing, mic recording, 3-band EQ, reverb, and WAV export.</p>
+          </div>
+        </div>
+      </a>
+
+      <a href="../Zombies3D/index.html" class="card-link">
+        <div class="card">
+          <img src="../assets/zombies3d.svg" alt="Zombies3D">
+          <div class="card-content">
+            <h3>Zombies 3D</h3>
+            <p>Call of Duty Zombies-inspired 3D FPS survival game with round scaling, weapon wall buys, and procedural audio.</p>
+          </div>
+        </div>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    © 2026 By JK
+  </footer>
+
+</body>
+</html>

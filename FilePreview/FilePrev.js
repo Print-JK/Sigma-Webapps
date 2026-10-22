@@ -1,6 +1,14 @@
 let currentFiles = [];
 let selectedFileIndex = null;
 let psdLayers = []; // Holds independent parsed sub-layer canvases
+let activeObjectUrls = [];
+
+function cleanupUrls() {
+  while (activeObjectUrls.length > 0) {
+    const u = activeObjectUrls.pop();
+    try { URL.revokeObjectURL(u); } catch (_) {}
+  }
+}
 
 // Extension Matcher
 function getFileType(fileName) {
@@ -122,15 +130,34 @@ function selectFile(index) {
   renderFileList();
   
   const file = currentFiles[index];
+  if (!file) return;
   const type = getFileType(file.name);
+
+  cleanupUrls();
 
   document.getElementById('selectedFileName').textContent = file.name;
   document.getElementById('selectedFileMeta').textContent = `${formatBytes(file.size)} • ${type.toUpperCase()}`;
+
+  const downloadBtn = document.getElementById('downloadCurrentBtn');
+  if (downloadBtn) {
+    downloadBtn.classList.remove('hidden');
+    downloadBtn.onclick = () => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(file);
+      a.download = file.name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    };
+  }
+
+  // Close mobile sidebar if open
+  document.getElementById('sidebar')?.classList.remove('open');
 
   const stage = document.getElementById('previewStage');
   stage.innerHTML = '<div class="placeholder"><p>Loading preview...</p></div>';
 
   const fileUrl = URL.createObjectURL(file);
+  activeObjectUrls.push(fileUrl);
 
   switch(type) {
     case 'image':
@@ -1117,3 +1144,53 @@ function parseMarkdown(md) {
   html = html.replace(/\n\n/g, '<p></p>');
   return html;
 }
+
+// Mobile sidebar toggle & keyboard navigation
+document.addEventListener('DOMContentLoaded', () => {
+  const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
+  const sidebar = document.getElementById('sidebar');
+  if (sidebarToggleBtn && sidebar) {
+    sidebarToggleBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+    });
+  }
+
+  // Drag and drop onto entire viewport
+  const viewport = document.getElementById('viewportArea');
+  if (viewport) {
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(name => {
+      viewport.addEventListener(name, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+    });
+    ['dragenter', 'dragover'].forEach(name => {
+      viewport.addEventListener(name, () => viewport.classList.add('drag-over'));
+    });
+    ['dragleave', 'drop'].forEach(name => {
+      viewport.addEventListener(name, () => viewport.classList.remove('drag-over'));
+    });
+    viewport.addEventListener('drop', (e) => {
+      const files = Array.from(e.dataTransfer.files || []);
+      if (files.length > 0) {
+        currentFiles.push(...files);
+        renderFileList();
+        selectFile(currentFiles.length - files.length);
+      }
+    });
+  }
+
+  // Keyboard navigation
+  window.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.key === 'ArrowDown' && currentFiles.length > 0) {
+      e.preventDefault();
+      const next = selectedFileIndex === null ? 0 : Math.min(currentFiles.length - 1, selectedFileIndex + 1);
+      selectFile(next);
+    } else if (e.key === 'ArrowUp' && currentFiles.length > 0) {
+      e.preventDefault();
+      const prev = selectedFileIndex === null ? 0 : Math.max(0, selectedFileIndex - 1);
+      selectFile(prev);
+    }
+  });
+});

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="340" viewBox="0 0 600 340">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1c1917"/>
+      <stop offset="100%" stop-color="#0c0a09"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="340" fill="url(#bg)"/>
+  <circle cx="300" cy="150" r="85" fill="url(#accent)" opacity="0.15"/>
+  <rect x="210" y="85" width="180" height="135" rx="10" fill="#292524" stroke="#44403c" stroke-width="2"/>
+  <circle cx="260" cy="125" r="14" fill="#fbbf24"/>
+  <polygon points="225,195 280,140 330,195" fill="#3b82f6" opacity="0.7"/>
+  <polygon points="300,195 340,155 380,195" fill="#8b5cf6" opacity="0.8"/>
+  <text x="300" y="280" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#ffffff" text-anchor="middle">PhotoCraft</text>
+  <text x="300" y="304" font-family="Arial, sans-serif" font-size="13" fill="#a8a29e" text-anchor="middle">Layered Raster Graphic Studio</text>
+</svg>

@@ -121,6 +121,88 @@
       fn: "pdfToExcel",
       expectedKinds: ["pdf"],
     },
+    {
+      id: "rotate-pdf",
+      icon: "🔄",
+      title: "Rotate PDF",
+      description: "Rotate PDF pages clockwise by 90°, 180°, or 270°.",
+      accept: ".pdf",
+      multiple: false,
+      fidelity: "high",
+      fn: "rotatePdf",
+      expectedKinds: ["pdf"],
+      renderOptions: renderRotateOptions,
+    },
+    {
+      id: "organize-pdf",
+      icon: "📑",
+      title: "Organize & Extract Pages",
+      description: "Extract specific page ranges or reorder pages in your PDF document.",
+      accept: ".pdf",
+      multiple: false,
+      fidelity: "high",
+      fn: "organizePdf",
+      expectedKinds: ["pdf"],
+      renderOptions: renderOrganizeOptions,
+    },
+    {
+      id: "page-numbers-pdf",
+      icon: "🔢",
+      title: "Add Page Numbers",
+      description: "Stamp customized page numbering (e.g. Page X of Y) onto PDF pages.",
+      accept: ".pdf",
+      multiple: false,
+      fidelity: "high",
+      fn: "addPageNumbers",
+      expectedKinds: ["pdf"],
+      renderOptions: renderPageNumbersOptions,
+    },
+    {
+      id: "watermark-pdf",
+      icon: "🛡️",
+      title: "Watermark PDF",
+      description: "Stamp diagonal text watermark (e.g. CONFIDENTIAL) onto all pages.",
+      accept: ".pdf",
+      multiple: false,
+      fidelity: "high",
+      fn: "watermarkPdf",
+      expectedKinds: ["pdf"],
+      renderOptions: renderWatermarkOptions,
+    },
+    {
+      id: "compress-pdf",
+      icon: "🗜️",
+      title: "Compress PDF",
+      description: "Re-encode PDF pages with optimized JPEG canvas compression.",
+      accept: ".pdf",
+      multiple: false,
+      fidelity: "medium",
+      fn: "compressPdf",
+      expectedKinds: ["pdf"],
+      renderOptions: renderCompressOptions,
+    },
+    {
+      id: "md-to-pdf",
+      icon: "📄",
+      title: "Markdown / TXT to PDF",
+      description: "Typeset Markdown or plain text into a clean multi-page PDF document.",
+      accept: ".md,.txt",
+      multiple: false,
+      fidelity: "high",
+      fn: "mdToPdf",
+      expectedKinds: ["txt", "md"],
+    },
+    {
+      id: "csv-excel",
+      icon: "📊",
+      title: "CSV ↔ Excel (XLSX)",
+      description: "Convert CSV spreadsheets to XLSX workbooks or XLSX to CSV.",
+      accept: ".csv,.xlsx",
+      multiple: false,
+      fidelity: "high",
+      fn: "csvExcel",
+      expectedKinds: ["xlsx", "csv"],
+    },
   ];
 
   const FIDELITY_LABEL = {
@@ -618,6 +700,78 @@
     `;
   }
 
+  function renderRotateOptions(container) {
+    container.innerHTML = `
+      <label>
+        Rotation angle
+        <select id="rotateAngle">
+          <option value="90">90° Clockwise</option>
+          <option value="180">180° Flip</option>
+          <option value="270">270° Counter-Clockwise</option>
+        </select>
+      </label>
+    `;
+  }
+
+  function renderOrganizeOptions(container) {
+    container.innerHTML = `
+      <label>
+        Pages to keep (e.g. 1-3, 5)
+        <input type="text" id="organizeRanges" placeholder="1-3, 5" />
+      </label>
+    `;
+  }
+
+  function renderPageNumbersOptions(container) {
+    container.innerHTML = `
+      <label>
+        Number format
+        <select id="pageNumberFormat">
+          <option value="page_of_total">Page X of Y</option>
+          <option value="number_only">Page Number Only (e.g. 1)</option>
+        </select>
+      </label>
+      <label>
+        Position
+        <select id="pageNumberPosition">
+          <option value="bottom_center">Bottom Center</option>
+          <option value="bottom_right">Bottom Right</option>
+          <option value="bottom_left">Bottom Left</option>
+        </select>
+      </label>
+    `;
+  }
+
+  function renderWatermarkOptions(container) {
+    container.innerHTML = `
+      <label>
+        Watermark text
+        <input type="text" id="watermarkText" value="CONFIDENTIAL" />
+      </label>
+      <label>
+        Opacity
+        <select id="watermarkOpacity">
+          <option value="0.15">Light (15%)</option>
+          <option value="0.25" selected>Standard (25%)</option>
+          <option value="0.45">Bold (45%)</option>
+        </select>
+      </label>
+    `;
+  }
+
+  function renderCompressOptions(container) {
+    container.innerHTML = `
+      <label>
+        Compression level
+        <select id="compressQuality">
+          <option value="0.8">Basic Compression (High Quality)</option>
+          <option value="0.65" selected>Recommended (Balanced)</option>
+          <option value="0.45">Maximum Compression (Smallest File)</option>
+        </select>
+      </label>
+    `;
+  }
+
   function collectOptions() {
     const opts = {};
     if (activeTool.id === "split-pdf") {
@@ -626,6 +780,23 @@
     }
     if (activeTool.id === "pdf-to-images") {
       opts.imageFormat = document.getElementById("imageFormat").value;
+    }
+    if (activeTool.id === "rotate-pdf") {
+      opts.angle = document.getElementById("rotateAngle")?.value || "90";
+    }
+    if (activeTool.id === "organize-pdf") {
+      opts.pageRange = document.getElementById("organizeRanges")?.value || "";
+    }
+    if (activeTool.id === "page-numbers-pdf") {
+      opts.format = document.getElementById("pageNumberFormat")?.value || "page_of_total";
+      opts.position = document.getElementById("pageNumberPosition")?.value || "bottom_center";
+    }
+    if (activeTool.id === "watermark-pdf") {
+      opts.watermarkText = document.getElementById("watermarkText")?.value || "CONFIDENTIAL";
+      opts.opacity = document.getElementById("watermarkOpacity")?.value || "0.25";
+    }
+    if (activeTool.id === "compress-pdf") {
+      opts.quality = document.getElementById("compressQuality")?.value || "0.65";
     }
     return opts;
   }
@@ -702,6 +873,17 @@
         <a class="download-link" href="${url}" download="${result.name}">Download</a>
       `;
       resultsArea.appendChild(row);
+    });
+  }
+
+  const backToGridBtn = document.getElementById("backToGridBtn");
+  if (backToGridBtn) {
+    backToGridBtn.addEventListener("click", () => {
+      workspace.classList.add("hidden");
+      toolGrid.classList.remove("hidden");
+      activeTool = null;
+      entries = [];
+      renderFileList();
     });
   }
 

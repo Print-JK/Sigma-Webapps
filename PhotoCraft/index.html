@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PhotoCraft — Layered Image Editor</title>
+  <link rel="stylesheet" href="../assets/modern-theme.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Top App Header -->
+  <header class="craft-header">
+    <div class="craft-brand">
+      <a href="../index.html" class="nav-pill-item" title="Back to Sigma Home" style="padding: 4px 10px;">⌂ Home</a>
+      <span style="color: rgba(255,255,255,0.2);">|</span>
+      <div class="craft-logo">🎨 Photo<span>Craft</span></div>
+    </div>
+
+    <div class="craft-menu-bar">
+      <button class="menu-btn" id="openImgBtn">📂 Open Image</button>
+      <input type="file" id="fileInput" accept="image/*" style="display:none;" />
+      <button class="menu-btn" id="btnUndo" title="Undo (Ctrl+Z)">↩ Undo</button>
+      <button class="menu-btn" id="btnRedo" title="Redo (Ctrl+Y)">↪ Redo</button>
+      <button class="menu-btn" id="exportPngBtn" style="color: #34d399; font-weight: 600;">💾 Export PNG</button>
+      <button class="menu-btn" id="exportJpgBtn" style="color: #60a5fa;">💾 Export JPG</button>
+    </div>
+
+    <div>
+      <span class="status-indicator">
+        <span class="status-dot online"></span>
+        <span style="font-size: 0.8rem; color: var(--text-muted);">Layers &amp; Blending</span>
+      </span>
+    </div>
+  </header>
+
+  <!-- Options Bar -->
+  <div class="craft-options-bar">
+    <div class="option-item">
+      <span>Color:</span>
+      <input type="color" id="brushColorInput" value="#10b981" title="Brush / Fill Color" />
+    </div>
+    <div class="option-item">
+      <span>Size:</span>
+      <input type="number" id="brushSizeInput" value="12" min="1" max="150" style="width: 55px;" />
+    </div>
+    <div class="option-item">
+      <span>Opacity:</span>
+      <input type="number" id="brushOpacityInput" value="1.0" min="0.1" max="1.0" step="0.1" style="width: 55px;" />
+    </div>
+    <div style="width: 1px; height: 18px; background: rgba(255,255,255,0.1);"></div>
+    <div class="option-item">
+      <span>Layer Opacity:</span>
+      <input type="range" id="layerOpacitySlider" min="0" max="100" value="100" style="width: 80px;" />
+    </div>
+    <div class="option-item">
+      <span>Blend Mode:</span>
+      <select id="layerBlendSelect">
+        <option value="source-over">Normal</option>
+        <option value="multiply">Multiply</option>
+        <option value="screen">Screen</option>
+        <option value="overlay">Overlay</option>
+        <option value="darken">Darken</option>
+        <option value="lighten">Lighten</option>
+        <option value="difference">Difference</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Studio Main Layout -->
+  <div class="studio-layout">
+    <!-- Left Tools Palette -->
+    <aside class="tools-palette">
+      <button class="tool-icon-btn active" id="tool_brush" title="Paintbrush Tool (B)">🖌️</button>
+      <button class="tool-icon-btn" id="tool_eraser" title="Eraser Tool (E)">🧹</button>
+      <button class="tool-icon-btn" id="tool_bucket" title="Paint Bucket / Flood Fill (G)">🪣</button>
+      <button class="tool-icon-btn" id="tool_rect" title="Rectangle Tool (U)">⬜</button>
+      <button class="tool-icon-btn" id="tool_circle" title="Ellipse Tool">⚪</button>
+      <button class="tool-icon-btn" id="tool_text" title="Type / Text Tool (T)">🔤</button>
+      <button class="tool-icon-btn" id="tool_eyedropper" title="Color Eyedropper (I)">💧</button>
+    </aside>
+
+    <!-- Central Canvas Stage -->
+    <main class="canvas-stage" id="stage">
+      <div class="canvas-wrapper" id="canvasWrapper">
+        <canvas id="compositeCanvas" width="800" height="600"></canvas>
+        <canvas id="interactionCanvas" width="800" height="600"></canvas>
+      </div>
+    </main>
+
+    <!-- Right Sidebar: Layers & Adjustments -->
+    <aside class="studio-sidebar">
+      <!-- Layers Section -->
+      <div class="panel-section" style="flex: 1; display: flex; flex-direction: column;">
+        <div class="panel-header">
+          <span>LAYERS</span>
+          <button class="btn btn-secondary" id="addLayerBtn" style="padding: 2px 8px; font-size: 0.75rem;">+ New Layer</button>
+        </div>
+        <div class="layers-list" id="layersList">
+          <!-- Populated dynamically -->
+        </div>
+        <div class="layer-actions-bar">
+          <button class="thumb-btn" id="moveUpBtn" title="Move Layer Up">▲ Up</button>
+          <button class="thumb-btn" id="moveDownBtn" title="Move Layer Down">▼ Down</button>
+        </div>
+      </div>
+
+      <!-- Adjustments Section -->
+      <div class="panel-section">
+        <div class="panel-header">
+          <span>COLOR ADJUSTMENTS</span>
+        </div>
+        <div class="adjustments-grid">
+          <button class="filter-btn" id="filter_brightness">☀️ Brightness</button>
+          <button class="filter-btn" id="filter_contrast">◐ Contrast</button>
+          <button class="filter-btn" id="filter_grayscale">⬛ Grayscale</button>
+          <button class="filter-btn" id="filter_sepia">📜 Sepia</button>
+          <button class="filter-btn" id="filter_invert" style="grid-column: 1 / -1;">🔄 Invert Colors</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

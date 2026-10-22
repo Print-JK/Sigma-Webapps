@@ -1,17 +1,23 @@
 :root {
-  --bg-primary: #121214;
-  --bg-secondary: #1a1a1e;
-  --bg-tertiary: #26262b;
-  --accent-color: #3b82f6;
-  --accent-hover: #2563eb;
-  --text-main: #f3f4f6;
-  --text-muted: #9ca3af;
-  --border-color: #374151;
+  --bg-primary: #11100f;
+  --bg-secondary: rgba(28, 26, 25, 0.78);
+  --bg-tertiary: rgba(38, 35, 33, 0.88);
+  --accent-color: #10b981;
+  --accent-hover: #059669;
+  --text-main: #f5f5f5;
+  --text-muted: rgba(255, 255, 255, 0.6);
+  --border-color: rgba(255, 255, 255, 0.1);
   --sidebar-width: 280px;
 
-  --success-color: #22c55e;
+  --success-color: #10b981;
   --danger-color: #ef4444;
-  --radius: 10px;
+  --radius: 14px;
+}
+
+.top-nav-bar {
+  display: flex;
+  justify-content: center;
+  padding: 20px 16px 0;
 }
 
 * {

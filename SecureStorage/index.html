@@ -2,81 +2,196 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>PassMan Multi-View</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>SecureStorage — PassMan Vault</title>
+  <link rel="stylesheet" href="../assets/modern-theme.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+<!-- Top Navigation Bar -->
 <div class="top-bar">
-  <div class="toggle-container">
-    <label class="switch">
-      <input type="checkbox" id="pageToggle">
-      <span class="slider round"></span>
-    </label>
-    <a id="toggleLabel" class="toggle-text" href="ZIPencrypt.html" target="_blank" style="pointer-events: none; text-decoration: none;">Passman</a>
+  <div class="nav-pill-bar">
+    <a href="../index.html" class="nav-pill-item" title="Back to Sigma Home">⌂ Home</a>
+    <span style="color: rgba(255,255,255,0.2);">|</span>
+    <div class="toggle-container">
+      <label class="switch" title="Toggle between PassMan and ZIPEncrypt">
+        <input type="checkbox" id="pageToggle">
+        <span class="slider round"></span>
+      </label>
+      <a id="toggleLabel" class="toggle-text" href="ZIPencrypt.html" style="text-decoration: none;">PassMan</a>
+    </div>
+    <span style="color: rgba(255,255,255,0.2);">|</span>
+    <span class="status-indicator">
+      <span class="status-dot online"></span>
+      <span style="font-size: 0.8rem; color: var(--text-muted);">Local &amp; Offline</span>
+    </span>
   </div>
 </div>
 
-  <div id="page1" class="page-view">
-    <h1>🔐 Local Password Manager</h1>
+<div id="page1" class="page-view">
+  <div class="header-section">
+    <h1><span class="header-icon">🔐</span> SecureStorage</h1>
+    <p class="subtitle">Zero-knowledge local password vault with client-side AES-GCM encryption</p>
+  </div>
 
-    <div class="cards-grid">
-      
-      <div class="card">
+  <div class="cards-grid">
+    
+    <!-- 1. Key Management -->
+    <div class="glass-card card">
+      <div class="card-title-row">
         <h2>1. Key Management</h2>
-        <div class="drop-zone" id="keyDropZone">
-          <p>Drag & Drop <code>.key</code> file here</p>
-          <span>or</span>
-          <input type="file" id="keyFileUpload" accept=".key" style="display:none" />
-          <button type="button" class="secondary" onclick="document.getElementById('keyFileUpload').click()">Browse File</button>
-        </div>
-        <div class="button-group" style="margin-top: 15px;">
-          <button id="generateKeyBtn">Generate & Download New Key</button>
-        </div>
-        <p id="keyStatus">No key loaded.</p>
+        <span class="badge" id="keyBadge">No Key</span>
       </div>
 
-      <div class="card">
-        <h2>2. Decrypt & Load Vault</h2>
-        <div class="drop-zone" id="csvDropZone">
-          <p>Drag & Drop encrypted <code>.enc</code> or <code>.csv</code> file</p>
-          <span>or</span>
-          <input type="file" id="csvFileInput" accept=".txt,.csv,.enc" style="display:none" />
-          <button type="button" class="secondary" onclick="document.getElementById('csvFileInput').click()">Browse Vault File</button>
-        </div>
-        <div class="button-group" style="margin-top: 15px;">
-          <button id="addNewBtn">Create Blank Entry</button>
-          <button id="addColumnBtn" class="secondary">+ Add Column</button>
+      <div class="drop-zone" id="keyDropZone">
+        <div class="drop-zone-icon">🔑</div>
+        <p>Drag &amp; Drop <code>.key</code> file or <strong>Encrypted ZIP</strong></p>
+        <span class="drop-zone-divider">or choose an action</span>
+        
+        <input type="file" id="keyFileUpload" accept=".key,.txt" style="display:none" />
+        <input type="file" id="zipArchiveUpload" accept=".zip,.enc" style="display:none" />
+
+        <div class="key-browse-buttons">
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('keyFileUpload').click()">
+            Browse .key File
+          </button>
+          <button type="button" class="btn btn-secondary" id="browseZipBtn" onclick="document.getElementById('zipArchiveUpload').click()">
+            Import Encrypted ZIP
+          </button>
         </div>
       </div>
 
+      <div class="button-group" style="margin-top: 16px;">
+        <button id="generateKeyBtn" class="btn btn-primary">Generate &amp; Download New Key</button>
+      </div>
+
+      <div class="key-status-box">
+        <span class="status-dot" id="keyStatusDot"></span>
+        <p id="keyStatus">No key loaded. Generate a key or upload one to unlock vault features.</p>
+      </div>
     </div>
 
-    <div class="card vault-card">
-      <div class="vault-header">
-        <div>
-          <h2>3. Password Vault</h2>
-          <span id="recordCount" class="badge">0 Records</span>
-        </div>
-        <div class="button-group">
-          <button id="downloadEncryptedBtn">Encrypt & Download Vault</button>
-          <button id="downloadCSVBtn" class="secondary">Download Plaintext CSV</button>
-        </div>
+    <!-- 2. Decrypt & Load Vault -->
+    <div class="glass-card card">
+      <div class="card-title-row">
+        <h2>2. Decrypt &amp; Load Vault</h2>
+        <span class="badge" id="vaultBadge">Unloaded</span>
       </div>
 
-      <div id="tableContainer" class="table-scroll-container">
-        <table id="passwordTable">
-          <thead id="tableHead"></thead>
-          <tbody id="tableBody"></tbody>
-        </table>
+      <div class="drop-zone" id="csvDropZone">
+        <div class="drop-zone-icon">📂</div>
+        <p>Drag &amp; Drop encrypted <code>.enc</code> or <code>.csv</code> file</p>
+        <span class="drop-zone-divider">or</span>
+        <input type="file" id="csvFileInput" accept=".txt,.csv,.enc" style="display:none" />
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('csvFileInput').click()">Browse Vault File</button>
       </div>
+
+      <div class="button-group" style="margin-top: 16px;">
+        <button id="addNewBtn" class="btn btn-glass">+ Create Blank Entry</button>
+        <button id="addColumnBtn" class="btn btn-secondary">+ Add Column</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 3. Password Vault -->
+  <div class="glass-card card vault-card">
+    <div class="vault-header">
+      <div class="vault-header-left">
+        <h2>3. Password Vault</h2>
+        <span id="recordCount" class="badge badge-accent">0 Records</span>
+      </div>
+
+      <div class="vault-search-box">
+        <input type="text" id="vaultSearchInput" placeholder="Search service, username, notes…" />
+      </div>
+
+      <div class="button-group vault-actions">
+        <button id="downloadEncryptedBtn" class="btn btn-primary" title="Encrypt using active key and download .enc file">
+          Encrypt &amp; Download Vault (.enc)
+        </button>
+        <button id="downloadCSVBtn" class="btn btn-secondary" title="Export plaintext CSV file">
+          Download Plaintext CSV
+        </button>
+      </div>
+    </div>
+
+    <div id="tableContainer" class="table-scroll-container">
+      <table id="passwordTable">
+        <thead id="tableHead"></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
     </div>
   </div>
+</div>
 
 <div id="page2" class="page-view" style="display: none;">
-  <!-- External HTML content will load here automatically -->
+  <!-- Fallback if toggled dynamically -->
 </div>
 
-  <script src="PassMan.js"></script>
+<!-- ==================== Encrypted ZIP Password Prompt Modal ==================== -->
+<div class="modal-overlay" id="zipPasswordModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 class="modal-title" id="zipModalTitle">🔓 Unlock Encrypted ZIP Archive</h3>
+      <button class="modal-close" id="zipModalCloseBtn" type="button">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="zip-info-banner" id="zipMethodBanner">
+        <span class="status-dot warning"></span>
+        <span id="zipMethodText">Detected: Password-encrypted ZIP archive</span>
+      </div>
+      <p class="zip-help-text">
+        Enter the archive password to decrypt and extract the enclosed key files locally.
+        <br><strong style="color: var(--text-main);">Note:</strong> This is the ZIP archive's password, distinct from any individual key credentials.
+      </p>
+      <div class="form-group" style="margin: 18px 0;">
+        <label for="zipPasswordInput" style="display:block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px;">Archive Password</label>
+        <div class="password-input-wrapper">
+          <input type="password" id="zipPasswordInput" class="form-control" placeholder="Enter ZIP password…" autofocus />
+          <button type="button" class="pwd-toggle-btn" id="zipPwdToggleBtn" title="Show/Hide Password">👁</button>
+        </div>
+      </div>
+      <div id="zipDecryptProgress" class="progress-container hidden" style="margin-bottom: 15px;">
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="zipProgressBar"></div>
+        </div>
+        <span class="progress-text" id="zipProgressText">Decrypting…</span>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="zipCancelBtn">Cancel</button>
+        <button type="button" class="btn btn-primary" id="zipSubmitBtn">Decrypt &amp; Scan Keys</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== Key Selection Modal ==================== -->
+<div class="modal-overlay" id="keySelectModal">
+  <div class="modal-box key-select-box">
+    <div class="modal-header">
+      <h3 class="modal-title">🔑 Select Encryption Key</h3>
+      <button class="modal-close" id="keySelectCloseBtn" type="button">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="key-select-subtitle">Multiple compatible keys were discovered inside the decrypted archive. Choose the key you want to use for PassMan:</p>
+      
+      <div class="key-candidates-list" id="keyCandidatesList">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <div class="modal-actions" style="margin-top: 20px;">
+        <button type="button" class="btn btn-secondary" id="keySelectCancelBtn">Cancel</button>
+        <button type="button" class="btn btn-accent" id="keySelectConfirmBtn" disabled>Use Selected Key</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="../lib/jszip.min.js"></script>
+<script src="zipDecryptor.js"></script>
+<script src="PassMan.js"></script>
 </body>
 </html>

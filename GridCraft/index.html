@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GridCraft — Spreadsheet Studio</title>
+  <link rel="stylesheet" href="../assets/modern-theme.css" />
+  <link rel="stylesheet" href="style.css" />
+  <!-- Offline Excel Engine -->
+  <script src="../lib/xlsx.full.min.js"></script>
+</head>
+<body>
+
+  <!-- Top App Header -->
+  <header class="grid-header">
+    <div class="grid-brand">
+      <a href="../index.html" class="ribbon-btn" style="width: auto; padding: 4px 10px; font-size: 0.82rem;" title="Back to Sigma Home">← Home</a>
+      <div style="font-weight: 700; font-size: 1.1rem; color: #fff; display: flex; align-items: center; gap: 6px;">
+        <span style="color: #10b981;">📈</span> GridCraft <span style="font-size: 0.72rem; color: #10b981; border: 1px solid rgba(16,185,129,0.3); border-radius: 9999px; padding: 2px 8px;">Studio</span>
+      </div>
+      <input type="text" id="sheetTitle" class="grid-title-input" value="Untitled Spreadsheet" title="Spreadsheet Title" />
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <button id="btnNewSheet" class="ribbon-btn" style="width: auto; padding: 4px 10px; font-size: 0.8rem;" title="Create Blank Sheet">📄 New</button>
+      <button id="btnOpenSheet" class="ribbon-btn" style="width: auto; padding: 4px 10px; font-size: 0.8rem;" title="Open XLSX or CSV File">📂 Open</button>
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display: none;" />
+
+      <button id="btnExportCsv" class="ribbon-btn" style="width: auto; padding: 4px 12px; font-size: 0.82rem; background: rgba(255,255,255,0.08); color: #fff;" title="Export Comma Separated Values (.csv)">Export CSV</button>
+      <button id="btnExportXlsx" class="ribbon-btn" style="width: auto; padding: 4px 12px; font-size: 0.82rem; background: #10b981; color: #000; font-weight: 600;" title="Export Microsoft Excel Workbook (.xlsx)">⚡ Export XLSX</button>
+    </div>
+  </header>
+
+  <!-- Ribbon Toolbar -->
+  <div class="grid-ribbon">
+    <!-- Formatting -->
+    <div class="ribbon-group">
+      <button id="btnBold" class="ribbon-btn" title="Bold"><b>B</b></button>
+      <button id="btnItalic" class="ribbon-btn" title="Italic"><i>I</i></button>
+      <button id="btnUnderline" class="ribbon-btn" title="Underline"><u>U</u></button>
+    </div>
+
+    <!-- Alignment -->
+    <div class="ribbon-group">
+      <button id="btnAlignLeft" class="ribbon-btn active" title="Align Left">⇤</button>
+      <button id="btnAlignCenter" class="ribbon-btn" title="Center">⇥⇤</button>
+      <button id="btnAlignRight" class="ribbon-btn" title="Align Right">⇥</button>
+    </div>
+
+    <!-- Number Formats -->
+    <div class="ribbon-group">
+      <select id="numFormatSelect" class="ribbon-select" title="Number Format">
+        <option value="general">General</option>
+        <option value="currency">Currency ($)</option>
+        <option value="percentage">Percentage (%)</option>
+        <option value="decimal">2 Decimals (.00)</option>
+        <option value="integer">Integer</option>
+      </select>
+    </div>
+
+    <!-- Colors -->
+    <div class="ribbon-group">
+      <!-- Text Color -->
+      <label class="ribbon-btn" style="position: relative;" title="Text Color">
+        <span style="font-weight: 700; text-decoration: underline; text-decoration-color: #10b981;">A</span>
+        <input type="color" id="textColorPicker" value="#ffffff" style="position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer;" />
+      </label>
+
+      <!-- Fill Color -->
+      <label class="ribbon-btn" style="position: relative;" title="Cell Fill Color">
+        <span>🎨</span>
+        <input type="color" id="fillColorPicker" value="#1c1a19" style="position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer;" />
+      </label>
+
+      <button id="btnClearCell" class="ribbon-btn" style="color: #ef4444;" title="Clear Cell (Del)">⌫</button>
+    </div>
+
+    <!-- Quick Formulas -->
+    <div class="ribbon-group">
+      <select id="quickFormulaSelect" class="ribbon-select" title="Insert Formula">
+        <option value="">fx Insert Formula...</option>
+        <option value="=SUM()">SUM(range)</option>
+        <option value="=AVERAGE()">AVERAGE(range)</option>
+        <option value="=COUNT()">COUNT(range)</option>
+        <option value="=MIN()">MIN(range)</option>
+        <option value="=MAX()">MAX(range)</option>
+        <option value="=IF(A1>0, 1, 0)">IF(condition, true, false)</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Formula Bar -->
+  <div class="formula-bar-container">
+    <div id="cellCoord" class="cell-coordinate-box">A1</div>
+    <span class="fx-label">fx</span>
+    <input type="text" id="formulaInput" class="formula-input" placeholder="Enter value or formula starting with '='" />
+  </div>
+
+  <!-- Grid Viewport -->
+  <main class="grid-viewport" id="gridViewport">
+    <table id="sheetTable" class="sheet-table">
+      <!-- Generated dynamically -->
+    </table>
+  </main>
+
+  <!-- Bottom Sheets Tab Bar & Status Bar -->
+  <footer class="sheet-tabs-bar">
+    <div id="sheetTabsList" style="display: flex; gap: 4px; align-items: center;">
+      <!-- Populated dynamically -->
+    </div>
+    <button id="btnAddSheet" class="add-sheet-btn" title="Add Sheet">+</button>
+
+    <div style="flex: 1;"></div>
+
+    <div id="gridStatusStats" style="font-size: 0.75rem; color: var(--text-muted); display: flex; gap: 14px;">
+      <span id="statSum">Sum: 0</span>
+      <span id="statAvg">Avg: 0</span>
+      <span id="statCount">Count: 0</span>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

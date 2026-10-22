@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DeckCraft — Slide Presentation Studio</title>
+  <link rel="stylesheet" href="../assets/modern-theme.css" />
+  <link rel="stylesheet" href="style.css" />
+  <!-- Offline PPTX Engine -->
+  <script src="../lib/pptxgen.min.js"></script>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="deck-header">
+    <div class="deck-brand">
+      <a href="../index.html" class="ribbon-btn" title="Back to Sigma Home">← Home</a>
+      <div style="font-weight: 700; font-size: 1.1rem; color: #fff; display: flex; align-items: center; gap: 6px;">
+        <span style="color: #f59e0b;">📊</span> DeckCraft <span style="font-size: 0.72rem; color: var(--gold-accent); border: 1px solid rgba(212,175,55,0.3); border-radius: 9999px; padding: 2px 8px;">Studio</span>
+      </div>
+      <input type="text" id="deckTitle" class="deck-title-input" value="Untitled Presentation" title="Presentation Title" />
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <button id="btnSaveJson" class="ribbon-btn" title="Save Presentation Project File">💾 Save</button>
+      <button id="btnOpenJson" class="ribbon-btn" title="Open Presentation Project File">📂 Open</button>
+      <input type="file" id="jsonFileInput" accept=".json" style="display: none;" />
+
+      <button id="btnPresent" class="ribbon-btn" style="background: rgba(255,255,255,0.08); color: #fff;" title="Start Fullscreen Slideshow (F5)">▶ Present (F5)</button>
+      <button id="btnExportPptx" class="ribbon-btn accent" title="Export Microsoft PowerPoint Presentation (.pptx)">⚡ Export PPTX</button>
+    </div>
+  </header>
+
+  <!-- Ribbon Toolbar -->
+  <div class="deck-ribbon">
+    <!-- Slide Management -->
+    <div class="ribbon-group">
+      <button id="btnAddSlide" class="ribbon-btn" title="Add New Slide">+ Slide</button>
+      <button id="btnDuplicateSlide" class="ribbon-btn" title="Duplicate Slide">⧉ Duplicate</button>
+      <button id="btnDeleteSlide" class="ribbon-btn" style="color: #ef4444;" title="Delete Slide">🗑 Delete</button>
+    </div>
+
+    <!-- Insert Elements -->
+    <div class="ribbon-group">
+      <button id="btnAddHeading" class="ribbon-btn" title="Insert Title Heading"><b>H</b> Title</button>
+      <button id="btnAddText" class="ribbon-btn" title="Insert Text Box">T Text</button>
+      <button id="btnAddRect" class="ribbon-btn" title="Insert Box / Card">▭ Card</button>
+      <button id="btnAddCircle" class="ribbon-btn" title="Insert Circle">○ Circle</button>
+      <button id="btnAddImage" class="ribbon-btn" title="Insert Image">🖼 Image</button>
+      <input type="file" id="imgFileInput" accept="image/*" style="display: none;" />
+    </div>
+
+    <!-- Element Formatting -->
+    <div class="ribbon-group">
+      <select id="fontSizeSelect" class="ribbon-select" title="Font Size">
+        <option value="16px">16 px</option>
+        <option value="20px">20 px</option>
+        <option value="28px" selected>28 px</option>
+        <option value="36px">36 px</option>
+        <option value="48px">48 px</option>
+        <option value="64px">64 px</option>
+      </select>
+
+      <!-- Text Color -->
+      <label class="ribbon-btn" style="position: relative;" title="Text Color">
+        <span>A</span>
+        <input type="color" id="textColorPicker" value="#ffffff" style="position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer;" />
+      </label>
+
+      <!-- Fill Color -->
+      <label class="ribbon-btn" style="position: relative;" title="Shape Fill Color">
+        <span>🎨</span>
+        <input type="color" id="fillColorPicker" value="#2a2725" style="position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer;" />
+      </label>
+
+      <button id="btnDeleteElement" class="ribbon-btn" style="color: #ef4444;" title="Delete Selected Element (Del)">✕</button>
+    </div>
+
+    <!-- Slide Canvas Background -->
+    <div class="ribbon-group">
+      <span style="font-size: 0.75rem; color: var(--text-muted); margin-right: 4px;">Theme:</span>
+      <select id="slideThemeSelect" class="ribbon-select" title="Slide Theme">
+        <option value="#1a1817">Dark Obsidian</option>
+        <option value="#141c2b">Deep Navy</option>
+        <option value="#1c2419">Forest Slate</option>
+        <option value="#2a1419">Rich Burgundy</option>
+        <option value="#ffffff">Classic White</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Studio Workspace -->
+  <div class="studio-workspace">
+    <!-- Left Slides Sidebar -->
+    <aside class="slides-sidebar">
+      <div class="sidebar-header">
+        <span>SLIDES</span>
+        <span id="slideCountBadge" style="font-size: 0.72rem; color: var(--gold-accent);">1 slide</span>
+      </div>
+      <div id="slideList" class="slide-list">
+        <!-- Thumbnails populated dynamically -->
+      </div>
+    </aside>
+
+    <!-- Center Stage Viewport -->
+    <main class="stage-viewport" id="stageViewport">
+      <div id="slideStage" class="slide-stage" tabindex="0">
+        <!-- Interactive slide elements rendered dynamically -->
+      </div>
+    </main>
+  </div>
+
+  <!-- Fullscreen Presentation Overlay -->
+  <div id="presenterOverlay" class="presenter-overlay" style="display: none;">
+    <div id="presenterSlide" class="presenter-slide"></div>
+    <div class="presenter-hud">
+      <button id="btnPresPrev" class="ribbon-btn">◀ Previous</button>
+      <span id="presPageNum">1 / 1</span>
+      <button id="btnPresNext" class="ribbon-btn">Next ▶</button>
+      <button id="btnPresExit" class="ribbon-btn" style="color: #ef4444;">Exit (Esc)</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

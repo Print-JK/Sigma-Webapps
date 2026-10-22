@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WordCraft — Document Studio</title>
+  <link rel="stylesheet" href="../assets/modern-theme.css" />
+  <link rel="stylesheet" href="style.css" />
+  <!-- Offline Libraries -->
+  <script src="../lib/jszip.min.js"></script>
+  <script src="../lib/mammoth.browser.min.js"></script>
+</head>
+<body>
+
+  <!-- Top App Navigation Bar -->
+  <header class="word-header">
+    <div class="word-brand">
+      <a href="../index.html" class="ribbon-btn" style="width: auto; padding: 4px 10px; font-size: 0.82rem;" title="Back to Sigma Home">← Home</a>
+      <div style="font-weight: 700; font-size: 1.1rem; color: #fff; display: flex; align-items: center; gap: 6px;">
+        <span style="color: #3b82f6;">📝</span> WordCraft
+      </div>
+      <input type="text" id="docTitle" class="doc-title-input" value="Untitled Document" title="Document Title" />
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <button id="btnNewDoc" class="ribbon-btn" style="width: auto; padding: 4px 10px; font-size: 0.8rem;" title="Create Blank Document">📄 New</button>
+      <button id="btnOpenDoc" class="ribbon-btn" style="width: auto; padding: 4px 10px; font-size: 0.8rem;" title="Open DOCX, TXT, MD, HTML">📂 Open</button>
+      <input type="file" id="fileInput" accept=".docx,.txt,.md,.html" style="display: none;" />
+
+      <!-- Export Dropdown -->
+      <div style="position: relative;">
+        <button id="btnExportMenu" class="ribbon-btn" style="width: auto; padding: 4px 12px; font-size: 0.82rem; background: var(--gold-accent); color: #000; font-weight: 600;" title="Export Document">
+          ⚡ Export ▾
+        </button>
+        <div id="exportDropdown" style="display: none; position: absolute; right: 0; top: 100%; margin-top: 4px; background: #22201e; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 200; min-width: 170px;">
+          <button id="exportDocx" class="ribbon-btn" style="width: 100%; justify-content: flex-start; padding: 8px 12px; border-radius: 0; font-size: 0.82rem;">📑 Word (.docx)</button>
+          <button id="exportPdf" class="ribbon-btn" style="width: 100%; justify-content: flex-start; padding: 8px 12px; border-radius: 0; font-size: 0.82rem;">🖨 Print / PDF</button>
+          <button id="exportHtml" class="ribbon-btn" style="width: 100%; justify-content: flex-start; padding: 8px 12px; border-radius: 0; font-size: 0.82rem;">🌐 Web Page (.html)</button>
+          <button id="exportMd" class="ribbon-btn" style="width: 100%; justify-content: flex-start; padding: 8px 12px; border-radius: 0; font-size: 0.82rem;">📋 Markdown (.md)</button>
+          <button id="exportTxt" class="ribbon-btn" style="width: 100%; justify-content: flex-start; padding: 8px 12px; border-radius: 0; font-size: 0.82rem;">📝 Plain Text (.txt)</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Ribbon Toolbar -->
+  <div class="word-ribbon">
+    <!-- Undo / Redo -->
+    <div class="ribbon-group">
+      <button id="btnUndo" class="ribbon-btn" title="Undo (Ctrl+Z)">↺</button>
+      <button id="btnRedo" class="ribbon-btn" title="Redo (Ctrl+Y)">↻</button>
+    </div>
+
+    <!-- Font Family & Size -->
+    <div class="ribbon-group">
+      <select id="fontFamilySelect" class="ribbon-select" title="Font Family">
+        <option value="Calibri, sans-serif">Calibri</option>
+        <option value="Arial, sans-serif">Arial</option>
+        <option value="'Times New Roman', serif">Times New Roman</option>
+        <option value="Georgia, serif">Georgia</option>
+        <option value="'Garamond', serif">Garamond</option>
+        <option value="'Courier New', monospace">Courier New</option>
+        <option value="'Trebuchet MS', sans-serif">Trebuchet</option>
+        <option value="Verdana, sans-serif">Verdana</option>
+      </select>
+      <select id="fontSizeSelect" class="ribbon-select" title="Font Size">
+        <option value="1">8 pt</option>
+        <option value="2">10 pt</option>
+        <option value="3" selected>11 pt</option>
+        <option value="4">14 pt</option>
+        <option value="5">18 pt</option>
+        <option value="6">24 pt</option>
+        <option value="7">36 pt</option>
+      </select>
+    </div>
+
+    <!-- Character Formatting -->
+    <div class="ribbon-group">
+      <button id="btnBold" class="ribbon-btn" title="Bold (Ctrl+B)"><b>B</b></button>
+      <button id="btnItalic" class="ribbon-btn" title="Italic (Ctrl+I)"><i>I</i></button>
+      <button id="btnUnderline" class="ribbon-btn" title="Underline (Ctrl+U)"><u>U</u></button>
+      <button id="btnStrike" class="ribbon-btn" title="Strikethrough"><s>S</s></button>
+      <button id="btnSub" class="ribbon-btn" title="Subscript">x₂</button>
+      <button id="btnSuper" class="ribbon-btn" title="Superscript">x²</button>
+      
+      <!-- Text Color -->
+      <label class="color-picker-label" title="Font Color">
+        <span style="font-weight: 700; text-decoration: underline; text-decoration-color: #ef4444;">A</span>
+        <input type="color" id="textColorPicker" value="#000000" />
+      </label>
+
+      <!-- Highlight Color -->
+      <label class="color-picker-label" title="Highlight Color">
+        <span style="background: #fef08a; padding: 1px 4px; border-radius: 2px; color: #000; font-size: 0.75rem;">🖍</span>
+        <input type="color" id="hiliteColorPicker" value="#ffff00" />
+      </label>
+
+      <button id="btnClearFormat" class="ribbon-btn" title="Clear Formatting">⌫</button>
+    </div>
+
+    <!-- Heading Styles -->
+    <div class="ribbon-group">
+      <select id="headingSelect" class="ribbon-select" title="Styles">
+        <option value="p">Normal Text</option>
+        <option value="h1">Heading 1</option>
+        <option value="h2">Heading 2</option>
+        <option value="h3">Heading 3</option>
+        <option value="blockquote">Quote</option>
+        <option value="pre">Code Block</option>
+      </select>
+    </div>
+
+    <!-- Alignment -->
+    <div class="ribbon-group">
+      <button id="btnAlignLeft" class="ribbon-btn active" title="Align Left">⇤</button>
+      <button id="btnAlignCenter" class="ribbon-btn" title="Center">⇥⇤</button>
+      <button id="btnAlignRight" class="ribbon-btn" title="Align Right">⇥</button>
+      <button id="btnAlignJustify" class="ribbon-btn" title="Justify">≡</button>
+    </div>
+
+    <!-- Lists & Indent -->
+    <div class="ribbon-group">
+      <button id="btnBulletList" class="ribbon-btn" title="Bullet List">•≡</button>
+      <button id="btnNumberList" class="ribbon-btn" title="Numbered List">1.≡</button>
+      <button id="btnOutdent" class="ribbon-btn" title="Decrease Indent">←|</button>
+      <button id="btnIndent" class="ribbon-btn" title="Increase Indent">|→</button>
+    </div>
+
+    <!-- Inserts -->
+    <div class="ribbon-group">
+      <button id="btnInsertTable" class="ribbon-btn" title="Insert Table">⊞</button>
+      <button id="btnInsertImage" class="ribbon-btn" title="Insert Image">🖼</button>
+      <input type="file" id="imageInput" accept="image/*" style="display: none;" />
+      <button id="btnInsertLink" class="ribbon-btn" title="Insert Link">🔗</button>
+      <button id="btnInsertHr" class="ribbon-btn" title="Horizontal Line">―</button>
+    </div>
+
+    <!-- Page Settings -->
+    <div class="ribbon-group">
+      <select id="marginSelect" class="ribbon-select" title="Page Margins">
+        <option value="normal">Normal Margins</option>
+        <option value="narrow">Narrow Margins</option>
+        <option value="wide">Wide Margins</option>
+      </select>
+      <select id="themeSelect" class="ribbon-select" title="Canvas Theme">
+        <option value="white">Classic White</option>
+        <option value="parchment">Warm Parchment</option>
+        <option value="dark">Dark Canvas</option>
+      </select>
+    </div>
+
+    <!-- Search Tool -->
+    <div class="ribbon-group">
+      <button id="btnToggleFind" class="ribbon-btn" title="Find & Replace (Ctrl+F)">🔍</button>
+    </div>
+  </div>
+
+  <!-- Document Viewport -->
+  <main class="word-viewport">
+    <div id="wordCanvas" class="word-page" contenteditable="true" spellcheck="true">
+      <h1>Welcome to WordCraft</h1>
+      <p>This is your distraction-free, local-first word processor running 100% in your browser without any server or cloud dependencies.</p>
+      <h2>Key Capabilities</h2>
+      <p>WordCraft provides an authentic editing experience with real-time formatting, tables, image insertion, and seamless file conversions:</p>
+      <ul>
+        <li><b>Microsoft Word (.docx) Compatibility:</b> Open and read existing Word documents via offline extraction and export full OOXML <code>.docx</code> files.</li>
+        <li><b>Clean Typography & Layouts:</b> Standard A4 dimensions with margin customization, ivory parchment and dark modes.</li>
+        <li><b>Tables & Media:</b> Insert responsive data tables and embed local graphics directly into the document structure.</li>
+        <li><b>Zero-Telemetry Privacy:</b> All keystrokes, content, and files remain strictly inside your browser.</li>
+      </ul>
+      <p>Start typing, paste text, or open an existing file from the top bar to begin!</p>
+    </div>
+  </main>
+
+  <!-- Find & Replace Floating Panel -->
+  <div id="findReplacePanel" class="find-replace-panel" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; font-weight: 600;">
+      <span>Find & Replace</span>
+      <button id="btnCloseFind" style="background: none; border: none; color: #888; cursor: pointer; font-size: 1rem;">×</button>
+    </div>
+    <div class="find-replace-row">
+      <input type="text" id="findInput" class="find-replace-input" placeholder="Find text..." />
+      <button id="btnFindNext" class="ribbon-btn" style="width: auto; padding: 2px 8px; font-size: 0.75rem;">Next</button>
+    </div>
+    <div class="find-replace-row">
+      <input type="text" id="replaceInput" class="find-replace-input" placeholder="Replace with..." />
+      <button id="btnReplace" class="ribbon-btn" style="width: auto; padding: 2px 8px; font-size: 0.75rem;">Replace</button>
+      <button id="btnReplaceAll" class="ribbon-btn" style="width: auto; padding: 2px 8px; font-size: 0.75rem;">All</button>
+    </div>
+  </div>
+
+  <!-- Status Bar -->
+  <footer class="word-statusbar">
+    <div class="status-stats">
+      <span id="wordCount">0 words</span>
+      <span>•</span>
+      <span id="charCount">0 characters</span>
+      <span>•</span>
+      <span id="readTime">0 min read</span>
+    </div>
+    <div id="saveStatus">Saved locally</div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

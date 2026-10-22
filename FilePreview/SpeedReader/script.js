@@ -1,5 +1,9 @@
-// Local PDF.js worker path
-pdfjsLib.GlobalWorkerOptions.workerSrc = '../../lib/pdf.worker.min.js';
+// Local PDF.js worker setup with file:// fallback
+if (window.location.protocol === 'file:') {
+  try { pdfjsLib.GlobalWorkerOptions.workerSrc = ''; } catch (_) {}
+} else {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '../../lib/pdf.worker.min.js';
+}
 
 const state = {
   pdfDoc: null,

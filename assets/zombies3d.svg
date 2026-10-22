@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="340" viewBox="0 0 600 340">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#140606"/>
+      <stop offset="100%" stop-color="#050202"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#dc2626" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#dc2626" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="600" height="340" fill="url(#bg)"/>
+  <circle cx="300" cy="140" r="100" fill="url(#glow)"/>
+  <!-- Crosshair & Zombie Eyes -->
+  <circle cx="300" cy="140" r="60" fill="none" stroke="#dc2626" stroke-width="2" stroke-dasharray="8,6"/>
+  <circle cx="300" cy="140" r="4" fill="#ef4444"/>
+  <line x1="220" y1="140" x2="270" y2="140" stroke="#dc2626" stroke-width="2"/>
+  <line x1="330" y1="140" x2="380" y2="140" stroke="#dc2626" stroke-width="2"/>
+  <line x1="300" y1="60" x2="300" y2="110" stroke="#dc2626" stroke-width="2"/>
+  <line x1="300" y1="170" x2="300" y2="220" stroke="#dc2626" stroke-width="2"/>
+  <!-- Glowing Eyes -->
+  <circle cx="280" cy="130" r="5" fill="#facc15"/>
+  <circle cx="320" cy="130" r="5" fill="#facc15"/>
+  <text x="300" y="275" font-family="Arial, sans-serif" font-size="24" font-weight="900" fill="#dc2626" letter-spacing="2" text-anchor="middle">ZOMBIES 3D</text>
+  <text x="300" y="302" font-family="Arial, sans-serif" font-size="13" fill="#a8a29e" text-anchor="middle">Undead Survival First-Person Shooter</text>
+</svg>

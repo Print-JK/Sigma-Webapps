@@ -1,0 +1,301 @@
+/**
+ * DeckCraft — Slide Presentation Studio Stylesheet
+ * Dark glassmorphism studio with 16:9 widescreen canvas and presentation mode
+ */
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-base);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* App Header */
+.deck-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: rgba(22, 20, 19, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  z-index: 100;
+  flex-shrink: 0;
+}
+
+.deck-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.deck-title-input {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+  width: 220px;
+}
+.deck-title-input:hover, .deck-title-input:focus {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+  outline: none;
+}
+
+/* Ribbon Toolbar */
+.deck-ribbon {
+  background: rgba(26, 24, 22, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  z-index: 90;
+  flex-shrink: 0;
+}
+
+.ribbon-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 8px;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+.ribbon-group:last-child {
+  border-right: none;
+  padding-right: 0;
+}
+
+.ribbon-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+.ribbon-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.ribbon-btn.accent {
+  background: var(--gold-accent);
+  color: #000;
+}
+.ribbon-btn.accent:hover {
+  background: #e5bd3b;
+}
+
+.ribbon-select {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-main);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  outline: none;
+  cursor: pointer;
+}
+.ribbon-select option {
+  background: #1c1a19;
+  color: #fff;
+}
+
+/* Studio Main Workspace: Left Slides + Center Stage */
+.studio-workspace {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Left Slides Navigator */
+.slides-sidebar {
+  width: 220px;
+  background: rgba(20, 18, 17, 0.95);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.sidebar-header {
+  padding: 10px 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.slide-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.slide-thumb-card {
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+}
+.slide-thumb-card:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+}
+.slide-thumb-card.active {
+  border-color: var(--gold-accent);
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.25);
+}
+
+.slide-thumb-preview {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #1a1a1a;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  color: #777;
+  padding: 4px;
+}
+
+.slide-thumb-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* Center Canvas Viewport */
+.stage-viewport {
+  flex: 1;
+  background: #0d0c0b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  overflow: auto;
+  position: relative;
+}
+
+/* 16:9 Slide Stage */
+.slide-stage {
+  width: 960px;
+  height: 540px;
+  background: #1a1817;
+  border-radius: 6px;
+  position: relative;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+  outline: none;
+}
+
+/* Elements on Slide */
+.slide-el {
+  position: absolute;
+  cursor: move;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.slide-el.selected {
+  outline: 2px solid var(--gold-accent);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
+}
+
+.slide-text {
+  outline: none;
+  user-select: text;
+  line-height: 1.3;
+}
+
+.slide-shape {
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+}
+
+.slide-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+/* Presentation Fullscreen Mode */
+.presenter-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.presenter-slide {
+  width: 96vw;
+  max-width: 170.66vh;
+  aspect-ratio: 16 / 9;
+  background: #1a1817;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.9);
+}
+
+.presenter-hud {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+  padding: 6px 18px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: #fff;
+  font-size: 0.85rem;
+  backdrop-filter: blur(10px);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.presenter-overlay:hover .presenter-hud {
+  opacity: 1;
+}

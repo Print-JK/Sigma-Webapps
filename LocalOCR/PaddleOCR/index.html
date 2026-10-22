@@ -2,79 +2,88 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PaddleOCR</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>PaddleOCR — Deep Learning Text Extractor</title>
+  <link rel="stylesheet" href="../../assets/modern-theme.css" />
+  <link rel="stylesheet" href="../style.css" />
   <link rel="stylesheet" href="style.css" />
-
-  <!-- ONNX Runtime Web Engine -->
+  <!-- Local ONNX Runtime Web Engine -->
   <script src="../../lib/ort.min.js"></script>
-  <!-- Official PaddleOCR JS Browser SDK --><!-- Import PaddleOCR as an ES Module and attach it to window -->
-<script type="module">
-  import { PaddleOCR } from "https://cdn.jsdelivr.net/npm/@paddleocr/paddleocr-js@0.4.2/+esm";
-  window.PaddleOCR = PaddleOCR;
-</script>
-  <!-- PDF.js for multi-page support -->
+  <!-- Local PDF.js -->
   <script src="../../lib/pdf.min.js"></script>
+  <!-- Local Preprocessor -->
+  <script src="../ocrPreprocessor.js"></script>
 </head>
 <body>
   <div class="app-container">
-    <header class="header">
-      <h1>PaddleOCR Text Extractor(Mostly Client-Side)</h1>
-      <p>Higher-Accuracy Deep Learning OCR (Runs via ONNX & WebAssembly)</p>
+    <!-- Top Pill Navbar -->
+    <header class="top-nav">
+      <div class="nav-pill-bar">
+        <a href="../../index.html" class="nav-pill-item" title="Back to Sigma Home">⌂ Home</a>
+        <span style="color: rgba(255,255,255,0.2);">|</span>
+        <a href="../index.html" class="nav-pill-item" title="Switch to LocalOCR">🔍 LocalOCR</a>
+        <span class="nav-pill-item active">⚡ PaddleOCR</span>
+        <span style="color: rgba(255,255,255,0.2);">|</span>
+        <span class="status-indicator">
+          <span class="status-dot online"></span>
+          <span style="font-size: 0.8rem; color: var(--text-muted);">ONNX Runtime Web</span>
+        </span>
+      </div>
     </header>
 
+    <div class="page-title-section">
+      <h1>PaddleOCR Deep Learning Extractor</h1>
+      <p class="subtitle">Neural network text recognition running client-side via ONNX Runtime &amp; WebAssembly. No remote telemetry.</p>
+    </div>
+
     <!-- Upload Area -->
-    <div class="upload-section" id="drop-zone">
+    <div class="upload-section glass-card" id="drop-zone">
       <div class="upload-content">
+        <div class="drop-icon">⚡</div>
         <h2>Drop, Upload, or Paste Files</h2>
-        <p class="supported-formats">
-          Supported formats: PNG, JPG, WEBP, PDF, MD, TXT
-        </p>
+        <p class="supported-formats">Supported formats: PNG, JPG, JPEG, WEBP, BMP, PDF, MD, TXT</p>
         <div class="actions">
-          <button class="btn-primary" id="browse-btn">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="17 8 12 3 7 8"></polyline>
-              <line x1="12" y1="3" x2="12" y2="15"></line>
-            </svg>
+          <button class="btn btn-primary" id="browse-btn" type="button">
             Browse Files
           </button>
           <input type="file" id="file-input" multiple hidden />
         </div>
-        <span class="disclaimer">*Your privacy is protected! No data is transmitted or stored.</span>
+        <span class="disclaimer">Runs completely inside your browser via WebAssembly.</span>
       </div>
     </div>
 
     <!-- Main Workspace -->
     <div class="workspace-container hidden" id="workspace">
       <!-- Sidebar -->
-      <aside class="sidebar">
+      <aside class="sidebar glass-card">
         <div class="sidebar-header">
-          <h3>FILES LIST</h3>
-          <button class="btn-small" id="add-more-btn">+ Add More</button>
+          <h3>QUEUE</h3>
+          <button class="btn btn-secondary" id="add-more-btn" style="padding: 4px 10px; font-size: 0.78rem;">+ Add More</button>
         </div>
         <ul class="file-list" id="file-list"></ul>
       </aside>
 
       <!-- Viewer -->
-      <main class="text-viewer">
+      <main class="text-viewer glass-card">
         <div class="viewer-header">
           <div class="file-info">
-            <span id="active-file-name">filename.txt</span>
+            <span id="active-file-name" class="active-title">filename.txt</span>
             <span id="active-file-meta" class="meta-tag">TEXT</span>
+            <span id="confidenceBadge" class="badge hidden">Confidence: -</span>
           </div>
-          <button class="btn-copy" id="copy-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
-            Copy Text
-          </button>
+          <div class="viewer-actions">
+            <button class="btn btn-secondary" id="downloadTxtBtn" type="button" title="Save as TXT">
+              💾 .txt
+            </button>
+            <button class="btn btn-primary" id="copy-btn" type="button">
+              📋 Copy Text
+            </button>
+          </div>
         </div>
 
         <div class="viewer-body">
-          <div id="status-bar" class="status-bar hidden">Initializing PaddleOCR model...</div>
-          <textarea id="output-text" readonly placeholder="Select a file or wait for extraction..."></textarea>
+          <div id="status-bar" class="status-bar hidden">Initializing PaddleOCR ONNX engine…</div>
+          <textarea id="output-text" placeholder="Select a file or wait for extraction..."></textarea>
         </div>
       </main>
     </div>

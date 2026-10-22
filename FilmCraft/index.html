@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FilmCraft — Nonlinear Video Studio</title>
+  <link rel="stylesheet" href="../assets/modern-theme.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Top App Navigation Bar -->
+  <header class="craft-header">
+    <div class="craft-brand">
+      <a href="../index.html" class="menu-btn" title="Back to Sigma Home">← Home</a>
+      <div class="craft-logo">
+        <span>🎬</span> FilmCraft <span style="font-size: 0.72rem; color: var(--gold-accent); font-weight: 500; border: 1px solid rgba(212,175,55,0.3); border-radius: 9999px; padding: 2px 8px; margin-left: 6px;">Studio</span>
+      </div>
+    </div>
+    <div class="craft-menu-bar">
+      <button class="menu-btn" id="importMediaTopBtn" onclick="document.getElementById('mediaFileInput').click()">+ Add Media</button>
+      <button class="menu-btn" id="btnSplit">✂ Split (S)</button>
+      <button class="menu-btn" id="btnDelete" style="color: #ef4444;">🗑 Delete (Del)</button>
+      <button class="menu-btn" id="btnExportVideo" style="background: var(--gold-accent); color: #000; font-weight: 600;">⚡ Export Video</button>
+    </div>
+  </header>
+
+  <!-- Studio Main Split -->
+  <div class="studio-layout">
+    
+    <!-- Top Half: Media Pool + 16:9 Canvas Viewport -->
+    <div class="top-studio-split">
+      <!-- Media Pool -->
+      <aside class="media-pool">
+        <div class="panel-header">
+          <span>PROJECT MEDIA</span>
+          <button id="importMediaBtn" class="menu-btn" style="padding: 2px 8px; font-size: 0.75rem;">+ Import</button>
+          <input type="file" id="mediaFileInput" multiple accept="video/*,audio/*,image/*" style="display: none;" />
+        </div>
+        <div id="mediaList" class="media-list">
+          <!-- Populated dynamically -->
+        </div>
+      </aside>
+
+      <!-- Preview Viewport -->
+      <main class="preview-viewport">
+        <div class="preview-canvas-wrapper">
+          <canvas id="previewCanvas" width="1280" height="720"></canvas>
+        </div>
+        <div class="playback-controls-bar">
+          <button id="playPauseBtn" class="transport-btn" title="Play/Pause (Space)">▶</button>
+          <div id="timecodeDisplay" class="timecode-display">00:00:00:00</div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Bottom Half: Multi-Track Timeline -->
+    <div class="timeline-section">
+      <div class="timeline-toolbar">
+        <div>
+          <span>Multi-Track Timeline (Drag media from library onto tracks or drag clips horizontally)</span>
+        </div>
+        <div style="font-size: 0.75rem;">
+          <span style="display: inline-block; width: 10px; height: 10px; background: #ef4444; border-radius: 2px; margin-right: 4px;"></span>Video
+          <span style="display: inline-block; width: 10px; height: 10px; background: #10b981; border-radius: 2px; margin-left: 10px; margin-right: 4px;"></span>Audio
+        </div>
+      </div>
+
+      <div class="timeline-workspace">
+        <!-- Track Headers -->
+        <div class="track-headers-column">
+          <div class="track-header-item" style="height: 24px; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 0.7rem;">TIMELINE</div>
+          <div class="track-header-item">🎥 Video 1</div>
+          <div class="track-header-item">🎬 Video 2 (Overlay)</div>
+          <div class="track-header-item">🔊 Audio 1</div>
+        </div>
+
+        <!-- Scrollable Tracks Area -->
+        <div class="tracks-scroll-area" id="tracksScrollArea">
+          <div class="tracks-canvas-container">
+            <!-- Ruler -->
+            <div class="timeline-ruler" id="timelineRuler"></div>
+
+            <!-- Track 0: Video 1 -->
+            <div class="track-row" id="trackRow_0"></div>
+            <!-- Track 1: Video 2 -->
+            <div class="track-row" id="trackRow_1"></div>
+            <!-- Track 2: Audio 1 -->
+            <div class="track-row" id="trackRow_2"></div>
+
+            <!-- Playhead -->
+            <div class="timeline-playhead" id="playhead">
+              <div class="playhead-handle"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

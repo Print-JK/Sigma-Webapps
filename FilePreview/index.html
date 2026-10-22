@@ -2,55 +2,74 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>File Previewer</title>
+  <title>FilePrev — Local File Previewer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="stylesheet" href="../assets/modern-theme.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
+  <!-- Top Navigation Pill Bar -->
   <header>
-    <div class="logo">
-      <span>📂</span> FilePrev
+    <div class="nav-pill-bar">
+      <a href="../index.html" class="nav-pill-item" title="Back to Sigma Home">⌂ Home</a>
+      <span style="color: rgba(255,255,255,0.2);">|</span>
+      <span class="nav-pill-item active">📂 FilePrev</span>
+      <a class="nav-pill-item" href="SpeedReader/index.html" target="_blank" title="Launch SpeedReader">⚡ SpeedReader</a>
+      <span style="color: rgba(255,255,255,0.2);">|</span>
+      <span class="status-indicator">
+        <span class="status-dot online"></span>
+        <span style="font-size: 0.8rem; color: var(--text-muted);" class="hide-mobile">Local Offline</span>
+      </span>
     </div>
+
     <div class="upload-controls">
-      <a class="btn" href="SpeedReader/index.html" style="text-decoration: none;" target="_blank">SpeedReader</a>
-      <button class="btn btn-primary" onclick="document.getElementById('singleInput').click()">
-        📄 File
+      <button class="btn btn-secondary mobile-toggle-btn" id="sidebarToggleBtn" title="Toggle File List">
+        ☰ Files
       </button>
-      <button class="btn" onclick="document.getElementById('folderInput').click()">
-        📁 Folder
+      <button class="btn btn-primary" onclick="document.getElementById('singleInput').click()" title="Choose a single file">
+        📄 Choose File
       </button>
-      <input type="file" id="singleInput" onchange="handleSingleFile(event)">
-      <input type="file" id="folderInput" webkitdirectory directory multiple onchange="handleFolderFiles(event)">
+      <button class="btn btn-glass" onclick="document.getElementById('folderInput').click()" title="Choose an entire directory">
+        📁 Choose Folder
+      </button>
+      <input type="file" id="singleInput" onchange="handleSingleFile(event)" style="display:none;" />
+      <input type="file" id="folderInput" webkitdirectory directory multiple onchange="handleFolderFiles(event)" style="display:none;" />
     </div>
   </header>
 
   <div class="app-body">
     <!-- Sidebar -->
-    <div class="sidebar">
-      <div class="sidebar-header">Files List</div>
-      <div class="file-tree" id="fileTree">
-        <div style="padding: 12px; font-size: 0.8rem; color: var(--text-muted);">No files loaded.</div>
+    <aside class="sidebar glass-card" id="sidebar">
+      <div class="sidebar-header-row">
+        <span class="sidebar-title">LOADED FILES</span>
+        <span id="fileCountBadge" class="badge">0</span>
       </div>
-    </div>
+      <div class="file-tree" id="fileTree">
+        <div class="empty-file-hint">Drop files or folders anywhere to preview.</div>
+      </div>
+    </aside>
 
     <!-- Viewport -->
-    <div class="viewport">
+    <main class="viewport glass-card" id="viewportArea">
       <div class="viewport-header" id="viewportHeader">
         <div class="file-info">
           <span class="file-name" id="selectedFileName">No File Selected</span>
           <span class="file-meta" id="selectedFileMeta"></span>
         </div>
-      </div>
-      <div class="preview-stage" id="previewStage">
-        <div class="placeholder">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-          </svg>
-          <p>Select a file or upload a folder to preview content</p>
+        <div class="viewport-actions" id="viewportActions">
+          <button id="downloadCurrentBtn" class="btn btn-secondary btn-icon hidden" title="Download Current File">💾</button>
         </div>
       </div>
-    </div>
+
+      <div class="preview-stage" id="previewStage">
+        <div class="placeholder">
+          <div class="drop-icon">📂</div>
+          <h3>Select a file or drop files here</h3>
+          <p>Supports PNG, JPG, GIF, WebP, SVG, PSD (with layered inspection), MP4, MP3, PDF, CSV, Markdown, and text formats.</p>
+        </div>
+      </div>
+    </main>
   </div>
 
   <script src="../lib/jszip.min.js"></script>

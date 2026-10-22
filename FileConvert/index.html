@@ -2,37 +2,46 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>FileConvert</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>FileConvert — Local Document Conversion &amp; PDF Suite</title>
+<link rel="stylesheet" href="../assets/modern-theme.css" />
 <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
-<div class="topbar">
-  <div class="brand">File<span>Convert</span></div>
-  <div class="topbar-note">100% local &middot; runs entirely in your browser &middot; no uploads</div>
-</div>
-
-<div class="protocol-banner hidden" id="protocolBanner">
-  ⚠ You're opening this as a local <code>file://</code> page. Some tools (anything that reads inside a
-  PDF) need a real local server to work in this browser. Run <code>python3 -m http.server 8000</code> in
-  this folder and open <code>http://localhost:8000</code> instead.
+<!-- Top Navigation Pill Bar -->
+<div class="top-nav-bar">
+  <div class="nav-pill-bar">
+    <a href="../index.html" class="nav-pill-item" title="Back to Sigma Home">⌂ Home</a>
+    <span style="color: rgba(255,255,255,0.2);">|</span>
+    <span class="nav-pill-item active">🔄 FileConvert</span>
+    <span style="color: rgba(255,255,255,0.2);">|</span>
+    <span class="status-indicator">
+      <span class="status-dot online"></span>
+      <span style="font-size: 0.8rem; color: var(--text-muted);">100% Client-Side Suite</span>
+    </span>
+  </div>
 </div>
 
 <main>
   <div class="page-header">
-    <h1>Local Document Conversion & Merging Tool</h1>
-    <p>Directly convert files within the browser. Nothing ever leaves this machine.</p>
+    <h1>Document Conversion &amp; PDF Workbench</h1>
+    <p>Merge, split, organize, convert, watermark, and compress documents directly in your browser. Complete privacy — zero server transmission.</p>
   </div>
 
   <div class="tool-grid" id="toolGrid">
-    <!-- populated by app.js from TOOL_DEFINITIONS -->
+    <!-- populated by app.js from TOOLS -->
   </div>
 
-  <div class="workspace hidden" id="workspace">
+  <div class="workspace hidden glass-card" id="workspace">
     <div class="workspace-header">
-      <h2 id="workspaceTitle">—</h2>
-      <p class="workspace-sub" id="workspaceSub"></p>
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+        <div>
+          <h2 id="workspaceTitle">—</h2>
+          <p class="workspace-sub" id="workspaceSub"></p>
+        </div>
+        <button class="btn btn-secondary" id="backToGridBtn" style="padding: 6px 14px; font-size: 0.82rem;">✕ Close Tool</button>
+      </div>
       <div class="fidelity-notice hidden" id="fidelityNotice"></div>
     </div>
 
@@ -45,7 +54,7 @@
         </div>
         <div class="sidebar-label">FILES <span id="fileCountLabel"></span></div>
         <div class="file-list" id="fileList"></div>
-        <button class="secondary hidden" id="clearBtn">Clear all</button>
+        <button class="btn btn-secondary hidden" id="clearBtn">Clear all</button>
       </div>
 
       <!-- ============ Right: preview + options + actions ============ -->
@@ -61,7 +70,7 @@
         <div class="options" id="optionsArea"></div>
 
         <div class="actions">
-          <button class="primary" id="convertBtn" disabled>Process &amp; Convert</button>
+          <button class="btn btn-primary" id="convertBtn" disabled>Process &amp; Convert</button>
         </div>
 
         <div class="status-area hidden" id="statusArea">
@@ -75,9 +84,9 @@
   </div>
 </main>
 
-<footer>FileConvert prototype &middot; conversions run locally via bundled open-source libraries (pdf-lib, pdf.js, mammoth, pptxgenjs, xlsx, jszip)</footer>
+<footer>FileConvert Suite &middot; Runs 100% locally via bundled open-source engines (pdf-lib, pdf.js, mammoth, pptxgenjs, xlsx, jszip)</footer>
 
-<!-- ===== Vendor libraries (all local, no CDN, no network calls) ===== -->
+<!-- ===== Vendor libraries ===== -->
 <script src="../lib/pdf-lib.min.js"></script>
 <script src="../lib/pdf.min.js"></script>
 <script src="../lib/jszip.min.js"></script>
@@ -95,6 +104,7 @@
 <script src="converters/wordPdf.js"></script>
 <script src="converters/pptPdf.js"></script>
 <script src="converters/excelPdf.js"></script>
+<script src="converters/pdfOps.js"></script>
 
 <!-- ===== App shell / UI wiring ===== -->
 <script src="app.js"></script>

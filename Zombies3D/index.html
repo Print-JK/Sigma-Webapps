@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zombies3D — Undead Survival</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Offline Bundled Three.js 3D Engine -->
+  <script src="../lib/three.min.js"></script>
+</head>
+<body>
+
+  <!-- 3D Canvas -->
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- Blood Damage Vignette -->
+  <div id="damageVignette" class="damage-vignette"></div>
+
+  <!-- FPS HUD -->
+  <div class="hud-overlay">
+    <!-- Top Left Round Indicator -->
+    <div class="round-indicator">
+      <span class="round-label">ROUND</span>
+      <span id="roundNum" class="round-number">1</span>
+    </div>
+
+    <!-- Top Navigation / Home Link -->
+    <div style="position: absolute; top: 24px; left: 50%; transform: translateX(-50%); pointer-events: auto;">
+      <a href="../index.html" style="color: rgba(255,255,255,0.4); text-decoration: none; font-size: 0.75rem; letter-spacing: 0.1em; background: rgba(0,0,0,0.5); padding: 4px 12px; border-radius: 9999px; border: 1px solid rgba(255,255,255,0.1);">← SIGMA WEBAPPS</a>
+    </div>
+
+    <!-- Top Right Points Counter -->
+    <div class="points-counter">
+      <span class="points-label">$</span>
+      <span id="pointsVal" class="points-value">500</span>
+    </div>
+
+    <!-- Center Crosshair & Hitmarker -->
+    <div class="crosshair-container">
+      <div class="crosshair-dot"></div>
+      <div id="hitmarker" class="hitmarker"></div>
+    </div>
+
+    <!-- Interaction Prompt -->
+    <div id="centerPrompt" class="center-prompt">Press F to Buy Trench Gun [500 pts]</div>
+
+    <!-- Bottom Left Health & Perks -->
+    <div class="health-panel">
+      <div class="health-bar-container">
+        <div id="healthBarFill" class="health-bar-fill"></div>
+      </div>
+      <div id="perksContainer" class="perks-bar">
+        <!-- Perk badges appear here -->
+      </div>
+    </div>
+
+    <!-- Bottom Right Weapon & Ammo -->
+    <div class="weapon-panel">
+      <div id="weaponName" class="weapon-name">M1911 PISTOL</div>
+      <div class="ammo-display">
+        <span id="ammoMag" class="ammo-mag">8</span>
+        <span style="color: #666; font-size: 1.5rem;">/</span>
+        <span id="ammoReserve" class="ammo-reserve">32</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Start / Pause Overlay -->
+  <div id="blocker" class="blocker-overlay">
+    <div class="start-card">
+      <div class="game-title">UNDEAD SURVIVAL</div>
+      <div class="game-subtitle">Call of Duty Zombies-Inspired 3D Browser FPS</div>
+
+      <div class="controls-list">
+        <div><span>W, A, S, D</span> — Move & Strafe</div>
+        <div><span>MOUSE</span> — Look around</div>
+        <div><span>LEFT CLICK</span> — Shoot</div>
+        <div><span>R</span> — Reload Weapon</div>
+        <div><span>1, 2, 3 / SCROLL</span> — Switch Weapon</div>
+        <div><span>F</span> — Buy Weapons / Ammo / Perks</div>
+        <div><span>SHIFT</span> — Sprint &nbsp;|&nbsp; <span>SPACE</span> — Jump</div>
+      </div>
+
+      <button id="startBtn" class="play-btn">SURVIVE NOW</button>
+    </div>
+  </div>
+
+  <!-- Game Over Overlay -->
+  <div id="gameOverOverlay" class="game-over-overlay">
+    <div class="game-over-card">
+      <div class="game-over-title">GAME OVER</div>
+      <p style="color: #888;">YOU HAVE BEEN OVERRUN BY THE HORDE</p>
+
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-box-title">ROUNDS SURVIVED</div>
+          <div id="statRounds" class="stat-box-num">1</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-title">ZOMBIES ELIMINATED</div>
+          <div id="statKills" class="stat-box-num">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-title">HEADSHOTS</div>
+          <div id="statHeadshots" class="stat-box-num">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-title">TOTAL POINTS EARNED</div>
+          <div id="statPoints" class="stat-box-num">0</div>
+        </div>
+      </div>
+
+      <button id="restartBtn" class="play-btn">PLAY AGAIN</button>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>

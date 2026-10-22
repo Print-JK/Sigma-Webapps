@@ -1,10 +1,17 @@
-// Setup PDF.js Worker
-/* 
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";*/
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  "../lib/pdf.worker.min.js";
+/**
+ * LocalOCR Engine
+ * High-accuracy client-side text extractor with interactive preprocessing studio.
+ * 100% offline, zero server requirement.
+ */
 
+// Setup PDF.js Worker with file:// protocol safe fallback
+if (window.location.protocol === "file:") {
+  try {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "";
+  } catch (_) {}
+} else {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "../lib/pdf.worker.min.js";
+}
 
 // DOM Elements
 const dropZone = document.getElementById("drop-zone");
@@ -14,58 +21,86 @@ const workspace = document.getElementById("workspace");
 const fileList = document.getElementById("file-list");
 const activeFileName = document.getElementById("active-file-name");
 const activeFileMeta = document.getElementById("active-file-meta");
+const confidenceBadge = document.getElementById("confidenceBadge");
 const outputText = document.getElementById("output-text");
 const copyBtn = document.getElementById("copy-btn");
+const downloadTxtBtn = document.getElementById("downloadTxtBtn");
+const downloadMdBtn = document.getElementById("downloadMdBtn");
+const togglePreviewBtn = document.getElementById("togglePreviewBtn");
+const previewDrawer = document.getElementById("previewDrawer");
+const originalPreviewImg = document.getElementById("originalPreviewImg");
+const processedPreviewImg = document.getElementById("processedPreviewImg");
 const addMoreBtn = document.getElementById("add-more-btn");
 const statusBar = document.getElementById("status-bar");
 
-// Supported File Extensions
-const SUPPORTED_TEXT = ["md", "txt"];
-const SUPPORTED_IMAGE = ["png", "jpg", "jpeg", "webp", "bmp"];
+// Preprocessing toggles
+const prepBinarize = document.getElementById("prepBinarize");
+const prepInvert = document.getElementById("prepInvert");
+const prepContrast = document.getElementById("prepContrast");
+const prepDenoise = document.getElementById("prepDenoise");
+const prepRotate = document.getElementById("prepRotate");
+const reprocessBtn = document.getElementById("reprocessBtn");
+
+const preprocessSettings = {
+  binarize: true,
+  invert: false,
+  contrast: 30,
+  denoise: true,
+  rotation: 0
+};
+
+// Supported Extensions
+const SUPPORTED_TEXT = ["md", "txt", "csv", "json", "xml", "log"];
+const SUPPORTED_IMAGE = ["png", "jpg", "jpeg", "webp", "bmp", "gif"];
 const SUPPORTED_PDF = ["pdf"];
 
-// Application State
-let filesData = []; // Array of { id, file, name, ext, type, status, content }
+// State
+let filesData = [];
 let activeFileId = null;
 let tesseractWorker = null;
 
-// Initialize Tesseract Worker
+// Initialize Tesseract Worker safely
 async function initOCRWorker() {
   if (!tesseractWorker) {
-    tesseractWorker = await Tesseract.createWorker("eng");
+    showStatus("Initializing local Tesseract OCR engine…");
+    try {
+      tesseractWorker = await Tesseract.createWorker("eng");
+    } catch (err) {
+      console.warn("Worker creation fallback:", err);
+      // Try default worker setup
+      tesseractWorker = await Tesseract.createWorker();
+      await tesseractWorker.loadLanguage("eng");
+      await tesseractWorker.initialize("eng");
+    }
+    hideStatus();
   }
 }
 
-// Event Listeners for File Selection
+// File Selection Listeners
 browseBtn.addEventListener("click", () => fileInput.click());
 addMoreBtn.addEventListener("click", () => fileInput.click());
 fileInput.addEventListener("change", (e) => handleFiles(e.target.files));
 
+// Clipboard Paste
 document.addEventListener("paste", (e) => {
-  const items = e.clipboardData || e.originalEvent.clipboardData;
-  if (!items || !items.items) return;
+  const items = e.clipboardData?.items;
+  if (!items) return;
 
   const pastedFiles = [];
-
-  for (let i = 0; i < items.items.length; i++) {
-    const item = items.items[i];
-    if (item.kind === "file") {
-      const file = item.getAsFile();
-      if (file) {
-        pastedFiles.push(file);
-      }
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].kind === "file") {
+      const file = items[i].getAsFile();
+      if (file) pastedFiles.push(file);
     }
   }
 
   if (pastedFiles.length > 0) {
-    // Prevent default paste behavior if files were pasted
     e.preventDefault();
     handleFiles(pastedFiles);
   }
 });
 
-
-// Drag and Drop Events
+// Drag & Drop
 ["dragenter", "dragover"].forEach((eventName) => {
   dropZone.addEventListener(eventName, (e) => {
     e.preventDefault();
@@ -81,24 +116,104 @@ document.addEventListener("paste", (e) => {
 });
 
 dropZone.addEventListener("drop", (e) => {
-  const dt = e.dataTransfer;
-  handleFiles(dt.files);
+  handleFiles(e.dataTransfer.files);
 });
 
-// Copy to Clipboard Action
-copyBtn.addEventListener("click", () => {
+// Copy to Clipboard
+copyBtn.addEventListener("click", async () => {
   if (outputText.value) {
-    navigator.clipboard.writeText(outputText.value);
-    const origText = copyBtn.innerText;
-    copyBtn.innerText = "Copied!";
-    setTimeout(() => (copyBtn.innerText = origText), 2000);
+    await navigator.clipboard.writeText(outputText.value);
+    const orig = copyBtn.innerText;
+    copyBtn.innerText = "✓ Copied!";
+    setTimeout(() => (copyBtn.innerText = orig), 1800);
+  }
+});
+
+// Download TXT
+downloadTxtBtn.addEventListener("click", () => {
+  const activeObj = filesData.find((f) => f.id === activeFileId);
+  const base = activeObj ? activeObj.name.replace(/\.[^/.]+$/, "") : "extracted_text";
+  downloadTextBlob(outputText.value, `${base}_ocr.txt`);
+});
+
+// Download Markdown
+downloadMdBtn.addEventListener("click", () => {
+  const activeObj = filesData.find((f) => f.id === activeFileId);
+  const base = activeObj ? activeObj.name.replace(/\.[^/.]+$/, "") : "extracted_text";
+  const md = `# OCR Extraction: ${activeObj?.name || ""}\n\n${outputText.value}`;
+  downloadTextBlob(md, `${base}_ocr.md`);
+});
+
+function downloadTextBlob(content, filename) {
+  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+// Toggle Preprocessed Preview
+togglePreviewBtn.addEventListener("click", () => {
+  previewDrawer.classList.toggle("hidden");
+});
+
+// Preprocessing button toggles
+function setupPrepPill(el, key, isToggle = true) {
+  if (!el) return;
+  el.addEventListener("click", () => {
+    if (isToggle) {
+      preprocessSettings[key] = !preprocessSettings[key];
+      el.classList.toggle("active", preprocessSettings[key]);
+    }
+  });
+}
+
+setupPrepPill(prepBinarize, "binarize");
+setupPrepPill(prepInvert, "invert");
+setupPrepPill(prepContrast, "contrast", false);
+if (prepContrast) {
+  prepContrast.addEventListener("click", () => {
+    preprocessSettings.contrast = preprocessSettings.contrast > 0 ? 0 : 35;
+    prepContrast.classList.toggle("active", preprocessSettings.contrast > 0);
+  });
+}
+setupPrepPill(prepDenoise, "denoise");
+if (prepRotate) {
+  prepRotate.addEventListener("click", () => {
+    preprocessSettings.rotation = (preprocessSettings.rotation + 90) % 360;
+    prepRotate.innerText = `↻ Rotate (${preprocessSettings.rotation}°)`;
+    prepRotate.classList.toggle("active", preprocessSettings.rotation !== 0);
+  });
+}
+
+// Re-process current file with updated preprocessing settings
+reprocessBtn.addEventListener("click", async () => {
+  const activeObj = filesData.find((f) => f.id === activeFileId);
+  if (!activeObj) return;
+
+  if (activeObj.type === "IMAGE") {
+    showStatus(`Re-running OCR on ${activeObj.name} with updated preprocessing…`);
+    activeObj.status = "PROCESSING";
+    renderFileList();
+    activeObj.content = await performOCROnImage(activeObj.file);
+    activeObj.status = "DONE";
+    hideStatus();
+    renderFileList();
+    outputText.value = activeObj.content;
+    if (confidenceBadge && activeObj.confidence) {
+      confidenceBadge.innerText = `Confidence: ${Math.round(activeObj.confidence)}%`;
+      confidenceBadge.className = "badge badge-accent";
+    }
   }
 });
 
 // Process incoming files
 function handleFiles(incomingFiles) {
   if (!incomingFiles.length) return;
-
   workspace.classList.remove("hidden");
 
   Array.from(incomingFiles).forEach((file) => {
@@ -117,6 +232,9 @@ function handleFiles(incomingFiles) {
       type: type,
       status: type === "UNSUPPORTED" ? "UNSUPPORTED" : "PENDING",
       content: type === "UNSUPPORTED" ? "Unsupported file type." : "",
+      confidence: null,
+      preprocessedUrl: null,
+      originalUrl: null
     };
 
     filesData.push(fileObj);
@@ -124,7 +242,6 @@ function handleFiles(incomingFiles) {
 
   renderFileList();
 
-  // If no file is selected yet, select the first newly added valid file
   if (!activeFileId && filesData.length > 0) {
     selectFile(filesData[filesData.length - incomingFiles.length].id);
   }
@@ -132,7 +249,6 @@ function handleFiles(incomingFiles) {
   processQueue();
 }
 
-// Render the sidebar list
 function renderFileList() {
   fileList.innerHTML = "";
   filesData.forEach((item) => {
@@ -146,7 +262,7 @@ function renderFileList() {
 
     const tagSpan = document.createElement("span");
     tagSpan.className = `tag ${item.type === "UNSUPPORTED" ? "unsupported" : ""}`;
-    tagSpan.innerText = item.status === "PROCESSING" ? "SCANNING..." : item.type;
+    tagSpan.innerText = item.status === "PROCESSING" ? "SCANNING…" : item.type;
 
     li.appendChild(nameSpan);
     li.appendChild(tagSpan);
@@ -154,21 +270,28 @@ function renderFileList() {
   });
 }
 
-// Select active file in sidebar
 function selectFile(id) {
   activeFileId = id;
   const fileObj = filesData.find((f) => f.id === id);
-
   if (!fileObj) return;
 
   activeFileName.innerText = fileObj.name;
   activeFileMeta.innerText = `${fileObj.file.size} Bytes • ${fileObj.type}`;
   outputText.value = fileObj.content;
 
+  if (fileObj.confidence) {
+    confidenceBadge.innerText = `Confidence: ${Math.round(fileObj.confidence)}%`;
+    confidenceBadge.className = "badge badge-accent";
+  } else {
+    confidenceBadge.className = "badge hidden";
+  }
+
+  if (fileObj.originalUrl) originalPreviewImg.src = fileObj.originalUrl;
+  if (fileObj.preprocessedUrl) processedPreviewImg.src = fileObj.preprocessedUrl;
+
   renderFileList();
 }
 
-// Process extraction queue
 async function processQueue() {
   for (let item of filesData) {
     if (item.status === "PENDING") {
@@ -176,73 +299,118 @@ async function processQueue() {
       renderFileList();
 
       if (item.id === activeFileId) {
-        showStatus(`Processing ${item.name}...`);
+        showStatus(`Processing ${item.name}…`);
       }
 
-      if (item.type === "TEXT") {
-        item.content = await readTextFile(item.file);
-      } else if (item.type === "IMAGE") {
-        item.content = await performOCROnImage(item.file);
-      } else if (item.type === "PDF") {
-        item.content = await performOCROnPDF(item.file);
+      try {
+        if (item.type === "TEXT") {
+          item.content = await readTextFile(item.file);
+        } else if (item.type === "IMAGE") {
+          item.content = await performOCROnImage(item);
+        } else if (item.type === "PDF") {
+          item.content = await performOCROnPDF(item);
+        }
+      } catch (err) {
+        item.content = `[OCR Error] Could not extract text from ${item.name}: ${err.message}`;
       }
 
       item.status = "DONE";
       hideStatus();
       renderFileList();
 
-      // If active item was updated, sync UI
       if (item.id === activeFileId) {
         outputText.value = item.content;
+        if (item.confidence) {
+          confidenceBadge.innerText = `Confidence: ${Math.round(item.confidence)}%`;
+          confidenceBadge.className = "badge badge-accent";
+        }
       }
     }
   }
 }
 
-// Read Markdown & Plain Text
 function readTextFile(file) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = (e) => reject(reader.error || new Error("Failed to read text."));
     reader.readAsText(file);
   });
 }
 
-// OCR for Images
-async function performOCROnImage(file) {
-  await initOCRWorker();
-  const url = URL.createObjectURL(file);
-  const ret = await tesseractWorker.recognize(url);
-  URL.revokeObjectURL(url);
-  return ret.data.text;
+// Load image into an Image element
+function loadImageElement(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      resolve({ img, url });
+    };
+    img.onerror = (err) => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Failed to load image."));
+    };
+    img.src = url;
+  });
 }
 
-// OCR for PDFs using PDF.js + Canvas + Tesseract
-async function performOCROnPDF(file) {
+// Perform OCR on Image with Preprocessing
+async function performOCROnImage(item) {
+  const file = item.file || item;
   await initOCRWorker();
+
+  const { img, url: origUrl } = await loadImageElement(file);
+  item.originalUrl = origUrl;
+  originalPreviewImg.src = origUrl;
+
+  // Run through preprocessing studio
+  const prepResult = window.OCRPreprocessor.preprocessImage(img, preprocessSettings);
+  item.preprocessedUrl = prepResult.dataUrl;
+  processedPreviewImg.src = prepResult.dataUrl;
+
+  // Run Tesseract on preprocessed canvas
+  const ret = await tesseractWorker.recognize(prepResult.canvas);
+  item.confidence = ret.data.confidence;
+
+  return ret.data.text.trim();
+}
+
+// Perform OCR / Text Extraction on PDF
+async function performOCROnPDF(item) {
+  const file = item.file || item;
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   let fullText = "";
 
   for (let i = 1; i <= pdf.numPages; i++) {
-    showStatus(`Processing PDF Page ${i}/${pdf.numPages}...`);
+    showStatus(`Processing PDF Page ${i}/${pdf.numPages}…`);
     const page = await pdf.getPage(i);
-    const viewport = page.getViewport({ scale: 1.5 });
 
-    // Render page to canvas
-    const canvas = document.createElement("canvas");
-    const context = canvas.getContext("2d");
-    canvas.height = viewport.height;
-    canvas.width = viewport.width;
+    // 1. Try native digital text extraction first
+    const textContent = await page.getTextContent();
+    const pageStrings = textContent.items.map((item) => item.str).filter(Boolean);
 
-    await page.render({ canvasContext: context, viewport: viewport }).promise;
+    if (pageStrings.length > 5) {
+      // PDF contains digital text stream!
+      fullText += `--- Page ${i} (Native Digital Text) ---\n` + pageStrings.join(" ") + "\n\n";
+    } else {
+      // Scanned PDF page: Fallback to Canvas + Tesseract OCR
+      await initOCRWorker();
+      const viewport = page.getViewport({ scale: 1.5 });
+      const canvas = document.createElement("canvas");
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext("2d");
+      await page.render({ canvasContext: ctx, viewport: viewport }).promise;
 
-    // Run OCR on rendered canvas
-    const ret = await tesseractWorker.recognize(canvas);
-    fullText += `--- Page ${i} ---\n` + ret.data.text + "\n\n";
+      // Apply preprocessing
+      const prep = window.OCRPreprocessor.preprocessImage(canvas, preprocessSettings);
+      const ret = await tesseractWorker.recognize(prep.canvas);
+      fullText += `--- Page ${i} (OCR Scanned) ---\n` + ret.data.text.trim() + "\n\n";
+    }
   }
 
-  return fullText;
+  return fullText.trim();
 }
 
 function showStatus(msg) {

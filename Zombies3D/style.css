@@ -1,0 +1,367 @@
+/**
+ * Zombies3D — Call of Duty Zombies-Inspired Survival Game Stylesheet
+ * Immersive FPS HUD, hitmarkers, blood vignette, and start/game-over screens
+ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  user-select: none;
+}
+
+#gameCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* FPS HUD Overlay */
+.hud-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Crosshair & Hitmarker */
+.crosshair-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
+}
+
+.crosshair-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.hitmarker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.05s ease;
+}
+.hitmarker.active {
+  opacity: 1;
+}
+.hitmarker::before, .hitmarker::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 2px;
+  background: #fff;
+}
+.hitmarker::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.hitmarker::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+.hitmarker.headshot::before, .hitmarker.headshot::after {
+  background: #ef4444;
+}
+
+/* Blood Damage Vignette */
+.damage-vignette {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  box-shadow: inset 0 0 100px 30px rgba(220, 20, 20, 0);
+  transition: box-shadow 0.2s ease;
+  z-index: 15;
+}
+.damage-vignette.hurt {
+  box-shadow: inset 0 0 140px 60px rgba(220, 20, 20, 0.7);
+}
+
+/* Top Left: Round Number */
+.round-indicator {
+  position: absolute;
+  top: 24px;
+  left: 32px;
+  display: flex;
+  flex-direction: column;
+}
+.round-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  color: #888;
+  font-weight: 700;
+}
+.round-number {
+  font-size: 3.5rem;
+  font-weight: 900;
+  color: #dc2626;
+  text-shadow: 0 0 16px rgba(220, 38, 38, 0.7);
+  line-height: 1;
+}
+
+/* Top Right: Points Counter */
+.points-counter {
+  position: absolute;
+  top: 28px;
+  right: 32px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  background: rgba(20, 18, 17, 0.7);
+  padding: 8px 18px;
+  border-radius: 9999px;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  backdrop-filter: blur(12px);
+}
+.points-label {
+  font-size: 0.8rem;
+  color: #d4af37;
+  font-weight: 700;
+}
+.points-value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #fbbf24;
+  font-family: monospace;
+}
+
+/* Bottom Left: Health Bar & Perks */
+.health-panel {
+  position: absolute;
+  bottom: 28px;
+  left: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 240px;
+}
+.health-bar-container {
+  width: 100%;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.health-bar-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #10b981, #34d399);
+  transition: width 0.15s ease;
+}
+.health-bar-fill.low {
+  background: linear-gradient(90deg, #ef4444, #dc2626);
+}
+
+.perks-bar {
+  display: flex;
+  gap: 8px;
+}
+.perk-badge {
+  background: rgba(212, 175, 55, 0.15);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  color: #fbbf24;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+/* Bottom Right: Weapon & Ammo */
+.weapon-panel {
+  position: absolute;
+  bottom: 28px;
+  right: 32px;
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.weapon-name {
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #e5e5e5;
+}
+.ammo-display {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 6px;
+  font-family: monospace;
+}
+.ammo-mag {
+  font-size: 2.8rem;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1;
+}
+.ammo-reserve {
+  font-size: 1.3rem;
+  color: #888;
+}
+
+/* Center Interactive Interaction Prompt */
+.center-prompt {
+  position: absolute;
+  top: 58%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(18, 16, 15, 0.85);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fbbf24;
+  backdrop-filter: blur(10px);
+  display: none;
+}
+
+/* Start / Pointer Lock Overlay */
+.blocker-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(10, 9, 8, 0.85);
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  cursor: pointer;
+}
+.start-card {
+  text-align: center;
+  max-width: 460px;
+  padding: 40px;
+  background: rgba(24, 22, 21, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+}
+.game-title {
+  font-size: 2.4rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  color: #dc2626;
+  text-shadow: 0 0 20px rgba(220, 38, 38, 0.6);
+  margin-bottom: 6px;
+}
+.game-subtitle {
+  font-size: 0.95rem;
+  color: #aaa;
+  margin-bottom: 24px;
+}
+.controls-list {
+  text-align: left;
+  font-size: 0.82rem;
+  color: #bbb;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.controls-list span {
+  color: #fbbf24;
+  font-weight: 700;
+}
+.play-btn {
+  display: inline-block;
+  background: #dc2626;
+  color: #fff;
+  font-weight: 700;
+  padding: 12px 32px;
+  border-radius: 50px;
+  font-size: 1rem;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.play-btn:hover {
+  background: #ef4444;
+  transform: scale(1.05);
+}
+
+/* Game Over Modal */
+.game-over-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+.game-over-card {
+  text-align: center;
+  background: rgba(22, 20, 19, 0.95);
+  border: 1px solid rgba(220, 38, 38, 0.4);
+  border-radius: 16px;
+  padding: 40px 60px;
+  box-shadow: 0 0 60px rgba(220, 38, 38, 0.4);
+}
+.game-over-title {
+  font-size: 3.2rem;
+  font-weight: 900;
+  color: #dc2626;
+  text-shadow: 0 0 30px rgba(220, 38, 38, 0.8);
+  margin-bottom: 16px;
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin: 24px 0;
+  text-align: left;
+}
+.stat-box {
+  background: rgba(255, 255, 255, 0.04);
+  padding: 12px 18px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.stat-box-title {
+  font-size: 0.72rem;
+  color: #888;
+  font-weight: 700;
+}
+.stat-box-num {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #fff;
+}

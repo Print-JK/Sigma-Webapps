@@ -11,6 +11,9 @@ let isClosed = false;
 // Audio Context Nodes
 const audio = document.getElementById('audioEngine');
 let audioCtx, analyser, sourceNode, dataArray;
+let bassFilter, midFilter, trebleFilter;
+let visualizerMode = 'circular';
+let currentAudioUrl = null;
 
 // DOM Elements
 const wrapper = document.getElementById('wrapper');
@@ -68,9 +71,26 @@ function setupAudioEngine() {
     if (!audioCtx) {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 64;
+      analyser.fftSize = 128;
       sourceNode = audioCtx.createMediaElementSource(audio);
-      sourceNode.connect(analyser);
+
+      bassFilter = audioCtx.createBiquadFilter();
+      bassFilter.type = 'lowshelf';
+      bassFilter.frequency.value = 250;
+
+      midFilter = audioCtx.createBiquadFilter();
+      midFilter.type = 'peaking';
+      midFilter.frequency.value = 1500;
+      midFilter.Q.value = 1;
+
+      trebleFilter = audioCtx.createBiquadFilter();
+      trebleFilter.type = 'highshelf';
+      trebleFilter.frequency.value = 4000;
+
+      sourceNode.connect(bassFilter);
+      bassFilter.connect(midFilter);
+      midFilter.connect(trebleFilter);
+      trebleFilter.connect(analyser);
       analyser.connect(audioCtx.destination);
       dataArray = new Uint8Array(analyser.frequencyBinCount);
       drawVisualizer();
@@ -174,8 +194,11 @@ function playTrack(index, isManualSelection = false) {
   }
 
   const file = activePlaylist[currentTrackIndex];
-  const objectUrl = URL.createObjectURL(file);
-  audio.src = objectUrl;
+  if (currentAudioUrl) {
+    try { URL.revokeObjectURL(currentAudioUrl); } catch (_) {}
+  }
+  currentAudioUrl = URL.createObjectURL(file);
+  audio.src = currentAudioUrl;
   audio.play();
 
   const parsedName = parseTrackName(file.name);
@@ -389,25 +412,106 @@ function updateMediaSessionMetadata(title, artist) {
   }
 }
 
-// --- Visualizer ---
+// --- EQ & Visualizer Handlers ---
+function changeEQ(event) {
+  const mode = event.target.value;
+  const eqBadge = document.getElementById('eqBadge');
+  if (eqBadge) eqBadge.innerText = `${mode.toUpperCase()} EQ`;
+
+  if (!bassFilter || !trebleFilter || !midFilter) return;
+
+  switch (mode) {
+    case 'bass':
+      bassFilter.gain.value = 7;
+      midFilter.gain.value = -1;
+      trebleFilter.gain.value = -2;
+      break;
+    case 'treble':
+      bassFilter.gain.value = -3;
+      midFilter.gain.value = 1;
+      trebleFilter.gain.value = 6;
+      break;
+    case 'vocal':
+      bassFilter.gain.value = -2;
+      midFilter.gain.value = 5;
+      trebleFilter.gain.value = 2;
+      break;
+    default: // flat
+      bassFilter.gain.value = 0;
+      midFilter.gain.value = 0;
+      trebleFilter.gain.value = 0;
+  }
+}
+
+function changeVisualizer(event) {
+  visualizerMode = event.target.value;
+}
+
+// --- Multi-Mode Visualizer ---
 function drawVisualizer() {
   requestAnimationFrame(drawVisualizer);
   if (!analyser) return;
 
   const canvas = document.getElementById('visualizerCanvas');
+  if (!canvas) return;
   const ctx = canvas.getContext('2d');
   
   analyser.getByteFrequencyData(dataArray);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  const barWidth = (canvas.width / dataArray.length) * 2;
-  let barHeight;
-  let x = 0;
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
 
-  for (let i = 0; i < dataArray.length; i++) {
-    barHeight = (dataArray[i] / 255) * canvas.height * 0.7;
-    ctx.fillStyle = '#3b82f6';
-    ctx.fillRect(x, canvas.height - barHeight, barWidth - 2, barHeight);
-    x += barWidth;
+  if (visualizerMode === 'circular') {
+    // Circular wave around album art with warm golden amber glow
+    const radius = 90;
+    ctx.beginPath();
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 3;
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = 'rgba(16, 185, 129, 0.7)';
+
+    for (let i = 0; i < dataArray.length; i++) {
+      const angle = (i / dataArray.length) * Math.PI * 2;
+      const amplitude = (dataArray[i] / 255) * 45;
+      const r = radius + amplitude;
+      const x = cx + Math.cos(angle) * r;
+      const y = cy + Math.sin(angle) * r;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  } else if (visualizerMode === 'pulse') {
+    // Ambient breathing pulse
+    let sum = 0;
+    for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+    const avg = sum / dataArray.length;
+    const pulseR = 80 + (avg / 255) * 60;
+
+    const grad = ctx.createRadialGradient(cx, cy, 30, cx, cy, pulseR);
+    grad.addColorStop(0, 'rgba(16, 185, 129, 0.45)');
+    grad.addColorStop(0.7, 'rgba(245, 158, 11, 0.25)');
+    grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, pulseR, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    // Frequency Bars with luxury gradient
+    const barWidth = (canvas.width / dataArray.length) * 1.8;
+    let x = (canvas.width - dataArray.length * barWidth) / 2;
+
+    for (let i = 0; i < dataArray.length; i++) {
+      const barHeight = (dataArray[i] / 255) * canvas.height * 0.65;
+      const grad = ctx.createLinearGradient(0, canvas.height, 0, canvas.height - barHeight);
+      grad.addColorStop(0, '#059669');
+      grad.addColorStop(1, '#10b981');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, canvas.height - barHeight, barWidth - 2, barHeight);
+      x += barWidth;
+    }
   }
 }

@@ -6,9 +6,13 @@
 (function (global) {
   "use strict";
 
-  // pdf.js needs an explicit local worker script (no CDN).
+  // pdf.js setup with file:// safe fallback
   if (global.pdfjsLib) {
-    global.pdfjsLib.GlobalWorkerOptions.workerSrc = "../lib/pdf.worker.min.js";
+    if (global.location && global.location.protocol === "file:") {
+      try { global.pdfjsLib.GlobalWorkerOptions.workerSrc = ""; } catch (_) {}
+    } else {
+      global.pdfjsLib.GlobalWorkerOptions.workerSrc = "../lib/pdf.worker.min.js";
+    }
   }
 
   function readFileAsArrayBuffer(file) {

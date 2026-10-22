@@ -2,21 +2,36 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>RadioLocal</title>
+  <title>RadioLocal — Local Audio Player</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <link rel="stylesheet" href="../assets/modern-theme.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+
+  <!-- Top Navigation Pill Bar -->
+  <div class="top-bar-container">
+    <div class="nav-pill-bar">
+      <a href="../index.html" class="nav-pill-item" title="Back to Sigma Home">⌂ Home</a>
+      <span style="color: rgba(255,255,255,0.2);">|</span>
+      <span class="nav-pill-item active">🎵 RadioLocal</span>
+      <span style="color: rgba(255,255,255,0.2);">|</span>
+      <span class="status-indicator">
+        <span class="status-dot online"></span>
+        <span style="font-size: 0.8rem; color: var(--text-muted);">Web Audio API</span>
+      </span>
+    </div>
+  </div>
 
   <div id="wrapper">
     <!-- Dark Backdrop Overlay -->
     <div class="overlay" id="overlay" onclick="toggleOffCanvas()"></div>
 
     <!-- Off-Canvas Sidebar -->
-    <nav class="navbar fixed-top" id="sidebar-wrapper" role="navigation">
+    <nav class="navbar fixed-top glass-card" id="sidebar-wrapper" role="navigation">
       <div class="sidebar-header">
         <div class="sidebar-brand">
-          <a href="#">🎵 Radio<span>Local</span></a>
+          <span>🎵 Radio<span>Local</span></span>
         </div>
       </div>
 
@@ -24,7 +39,7 @@
       <div class="sidebar-content-padding">
         <div class="dropzone compact" id="dropzone" onclick="document.getElementById('singleInput').click()">
           <p>Drop audio or <span class="browse-link">browse</span></p>
-          <span class="sidebar-label" style="display:block; margin-top: 4px;">MP3, WAV, OGG, AAC, FLAC</span>
+          <span class="sidebar-label" style="display:block; margin-top: 4px;">MP3, WAV, OGG, AAC, FLAC, M4A</span>
         </div>
 
         <div class="upload-buttons">
@@ -35,7 +50,7 @@
         </div>
 
         <div class="search-box">
-          <input type="text" id="searchInput" placeholder="Filter playlist (e.g. ABBA)..." oninput="handleSearch(event)">
+          <input type="text" id="searchInput" placeholder="Filter playlist (e.g. Queen, Jazz)…" oninput="handleSearch(event)">
         </div>
 
         <div class="sidebar-header-row">
@@ -53,7 +68,7 @@
     <!-- Page Content -->
     <div id="page-content-wrapper">
       <!-- Animated Hamburger Button -->
-      <button type="button" class="hamburger is-closed" id="hamburgerBtn" onclick="toggleOffCanvas()">
+      <button type="button" class="hamburger is-closed" id="hamburgerBtn" onclick="toggleOffCanvas()" title="Toggle Playlist Drawer">
         <span class="hamb-top"></span>
         <span class="hamb-middle"></span>
         <span class="hamb-bottom"></span>
@@ -61,17 +76,35 @@
 
       <!-- Main Stage Viewport -->
       <main class="workspace-main">
-        <div class="now-playing-hero">
+        <div class="now-playing-hero glass-card" id="heroDropZone">
           <div class="cover-art-container">
-            <canvas id="visualizerCanvas" width="300" height="300"></canvas>
+            <canvas id="visualizerCanvas" width="340" height="340"></canvas>
             <div class="cover-placeholder" id="coverPlaceholder">🎵</div>
           </div>
 
           <div class="track-details">
-            <span class="badge" id="nowPlayingBadge">NOW PLAYING</span>
+            <div class="badge-row">
+              <span class="badge badge-accent" id="nowPlayingBadge">READY</span>
+              <span class="badge" id="eqBadge">Flat EQ</span>
+            </div>
             <h1 id="heroTrackTitle">No Track Selected</h1>
-            <p id="heroTrackArtist">Select or upload audio files to start playback</p>
+            <p id="heroTrackArtist">Upload audio files or click the playlist icon top-left to begin playback</p>
             <p id="heroTrackMeta" class="meta-text">-</p>
+
+            <div class="quick-controls" style="margin-top: 18px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+              <select id="eqSelect" class="form-control" style="width: auto; padding: 6px 12px; font-size: 0.8rem;" onchange="changeEQ(event)">
+                <option value="flat">Flat EQ</option>
+                <option value="bass">Bass Boost</option>
+                <option value="treble">Treble Boost</option>
+                <option value="vocal">Vocal Enhance</option>
+              </select>
+
+              <select id="vizSelect" class="form-control" style="width: auto; padding: 6px 12px; font-size: 0.8rem;" onchange="changeVisualizer(event)">
+                <option value="circular">Circular Wave</option>
+                <option value="bars">Frequency Bars</option>
+                <option value="pulse">Ambient Pulse</option>
+              </select>
+            </div>
           </div>
         </div>
       </main>
@@ -81,10 +114,10 @@
   </div>
   <!-- /#wrapper -->
 
-  <!-- Persistent Bottom Spotify Playback Bar -->
-  <footer class="player-bar">
+  <!-- Persistent Bottom Glassmorphic Playback Bar (Dribbble media card inspired) -->
+  <footer class="player-bar glass-card">
     <div class="player-left">
-      <div class="mini-art">🎵</div>
+      <div class="mini-art" id="miniArt">🎵</div>
       <div class="mini-info">
         <div class="mini-title" id="miniTitle">Not Playing</div>
         <div class="mini-artist" id="miniArtist">-</div>
@@ -108,7 +141,7 @@
     </div>
 
     <div class="player-right">
-      <button class="control-btn" id="muteBtn" onclick="toggleMute()">🔊</button>
+      <button class="control-btn" id="muteBtn" onclick="toggleMute()" title="Mute/Unmute">🔊</button>
       <input type="range" id="volumeBar" value="100" min="0" max="100" oninput="adjustVolume(event)">
     </div>
   </footer>

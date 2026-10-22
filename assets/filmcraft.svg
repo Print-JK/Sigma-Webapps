@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="340" viewBox="0 0 600 340">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1c1917"/>
+      <stop offset="100%" stop-color="#0c0a09"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="340" fill="url(#bg)"/>
+  <rect x="190" y="80" width="220" height="135" rx="8" fill="#1e1b18" stroke="#ef4444" stroke-width="2"/>
+  <polygon points="280,125 330,150 280,175" fill="#ef4444"/>
+  <rect x="190" y="200" width="220" height="15" fill="#2a2522"/>
+  <rect x="220" y="203" width="60" height="9" rx="2" fill="#ef4444"/>
+  <rect x="300" y="203" width="40" height="9" rx="2" fill="#10b981"/>
+  <text x="300" y="280" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#ffffff" text-anchor="middle">FilmCraft</text>
+  <text x="300" y="304" font-family="Arial, sans-serif" font-size="13" fill="#a8a29e" text-anchor="middle">Multi-Track Nonlinear Video Studio</text>
+</svg>
