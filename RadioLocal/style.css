@@ -1,22 +1,16 @@
 :root {
-  --bg-primary: #11100f;
-  --bg-secondary: rgba(28, 26, 25, 0.95);
-  --bg-tertiary: rgba(38, 35, 33, 0.88);
-  --accent-color: #10b981;
-  --accent-hover: #059669;
-  --text-main: #f5f5f5;
-  --text-muted: rgba(255, 255, 255, 0.6);
-  --border-color: rgba(255, 255, 255, 0.1);
+  --bg-primary: var(--bg-base, #0b0c10);
+  --bg-secondary: var(--glass-bg, rgba(28, 28, 34, 0.72));
+  --bg-tertiary: var(--glass-bg-hover, rgba(38, 38, 46, 0.85));
+  --accent-color: var(--accent-primary, #0a84ff);
+  --accent-hover: var(--accent-primary-hover, #0071e3);
+  --text-main: var(--text-main, #f5f5f7);
+  --text-muted: var(--text-muted, rgba(245, 245, 247, 0.65));
+  --border-color: var(--glass-border, rgba(255, 255, 255, 0.14));
   --sidebar-width: 300px;
   --player-bar-height: 84px;
+  --top-bar-height: 48px;
   --radius: 14px;
-}
-
-.top-bar-container {
-  display: flex;
-  justify-content: center;
-  padding: 12px 16px 0;
-  z-index: 10;
 }
 
 * {
@@ -36,12 +30,28 @@ html, body {
   flex-direction: column;
 }
 
-/* ---------- Main App Wrapper ---------- */
+/* ---------- Top Navigation Bar ---------- */
+.top-bar-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 16px;
+  height: var(--top-bar-height);
+  min-height: var(--top-bar-height);
+  flex-shrink: 0;
+  z-index: 10;
+  position: relative;
+}
+
+/* ---------- Main App Wrapper ----------
+   FIX: Previously used calc(100% - player-bar-height) which didn't
+   account for top-bar-container height. Now uses flex: 1 so it fills
+   exactly the remaining space between top-bar and player-bar. */
 #wrapper {
   display: flex;
   flex: 1;
-  width: 100vw;
-  height: calc(100% - var(--player-bar-height));
+  width: 100%;
+  min-height: 0; /* critical for flex children with overflow */
   position: relative;
   overflow: hidden;
   transition: all 0.4s ease;
@@ -358,6 +368,13 @@ html, body {
   font-weight: 600;
 }
 
+.badge-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+}
+
 .track-details h1 {
   font-size: 1.2rem;
   margin: 6px 0 4px;
@@ -370,12 +387,23 @@ html, body {
   font-size: 0.85rem;
 }
 
-/* ---------- Fixed Mobile & Desktop Player Bar ---------- */
+.meta-text {
+  font-size: 0.75rem !important;
+  font-family: ui-monospace, monospace;
+}
+
+/* ---------- Fixed Bottom Player Bar ----------
+   FIX: Uses flex-shrink: 0 to guarantee it never collapses.
+   Sits at the bottom of the body flex column, always visible. */
 .player-bar {
   height: var(--player-bar-height);
+  min-height: var(--player-bar-height);
   width: 100%;
-  background: var(--bg-secondary);
-  border-top: 1px solid var(--border-color);
+  background: var(--glass-bg-floating, rgba(34, 34, 42, 0.82));
+  border-top: 1px solid var(--glass-border-top, rgba(255, 255, 255, 0.25));
+  box-shadow: var(--glass-highlight-top), var(--glass-shadow-floating);
+  backdrop-filter: blur(var(--blur-amount, 28px)) saturate(var(--saturate-amount, 190%));
+  -webkit-backdrop-filter: blur(var(--blur-amount, 28px)) saturate(var(--saturate-amount, 190%));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -531,5 +559,32 @@ html, body {
 
   .player-center {
     width: 65%;
+  }
+}
+
+/* ---------- Short viewport safety ---------- */
+@media (max-height: 480px) {
+  .cover-art-container {
+    width: 120px;
+    height: 120px;
+  }
+
+  .track-details h1 {
+    font-size: 1rem;
+  }
+
+  .workspace-main {
+    padding: 12px;
+  }
+
+  .quick-controls {
+    display: none; /* Hide secondary controls on very short viewports */
+  }
+}
+
+/* ---------- Android safe area / browser chrome ---------- */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .player-bar {
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }

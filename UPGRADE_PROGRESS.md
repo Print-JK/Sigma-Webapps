@@ -11,6 +11,47 @@
 
 ---
 
+## Second-Pass Engineering Tracker & Fidelity Repairs
+
+### Priority 1: RadioLocal Hidden Interface Bar
+- **Root Cause:** `#wrapper` was sized with `height: calc(100% - var(--player-bar-height))` while the body had `display: flex; flex-direction: column; overflow: hidden;` containing 3 children: `.top-bar-container` (48px), `#wrapper`, and `.player-bar` (84px). Because `#wrapper` did not account for `.top-bar-container`'s 48px height, the cumulative height exceeded the viewport by exactly 48px, pushing `.player-bar` partially/completely off-screen.
+- **Files Changed:** `RadioLocal/style.css`, `RadioLocal/index.html`
+- **Remedy:** Converted `#wrapper` to `flex: 1; min-height: 0; width: 100%;` and pinned `.player-bar` with `flex-shrink: 0; min-height: var(--player-bar-height);`. Added `flex-shrink: 0; height: var(--top-bar-height);` to `.top-bar-container`. Added Android safe-area padding `env(safe-area-inset-bottom)` and short viewport `@media (max-height: 480px)` breakpoint.
+- **Verification:** Verified via Chromium headless CDP on desktop (1280x800) and Android mobile (390x844). Bounding rects confirm `topBar` (0–48px), `wrapper` (48–629px), and `playerBar` (629–713px) with `isFullyVisible: true` and all transport controls (shuffle, prev, play/pause, next, repeat, volume, scrubber) interactive.
+
+### Priority 2: Apple Liquid Glass Design System
+- **Design Philosophy:** Faithful realization of Apple's official Liquid Glass specifications ([WWDC / SwiftUI Human Interface](https://developer.apple.com/documentation/SwiftUI/Applying-Liquid-Glass-to-custom-views)). Translucent layered materials, dynamic refraction hints, physical specular edge highlights (`inset 0 1px 1px 0 rgba(255,255,255,0.32)`), and concentric geometry.
+- **Clear Layer Separation:** Glass is strictly reserved for the navigation and control layer (floating pill bars, toolbars, sheets, action bars, modal dialogs). Data content viewports (A4 paper in WordCraft, spreadsheet cells in GridCraft, PDF viewport in PdfCraft, drawing canvas in PhotoCraft, DAW clips in SoundCraft) maintain high-contrast, opaque legibility.
+- **Files Created / Changed:** `assets/modern-theme.css`, `assets/liquid-glass.js`, `RadioLocal/style.css`, `RadioLocal/index.html`.
+- **Accessibility:** Built-in automatic degradation for `@media (prefers-reduced-transparency: reduce)` (replaces translucency with solid high-contrast backgrounds) and `@media (prefers-reduced-motion: reduce)`.
+
+### Priority 3: 7 Craft Applications Fidelity Audit & Strengthening
+- **Upstream Audit:** Researched the upstream **ArtCraft** organization ([`github.com/storytold`](https://github.com/storytold)) and its suite (`pdfcraft`, `photocraft`, `filmcraft`, `wordcraft`, `deckcraft`, `gridcraft`, `soundcraft`). Documented the Rust/egui/WASM architecture and mapped data models to browser-native standards in `CRAFT_FIDELITY_AUDIT.md`.
+- **Feature Enhancements Applied:**
+  - `PdfCraft`: Added dynamic page reordering (Move Up ▲ / Move Down ▼) with synchronized `pdf-lib` document recreation and PDF.js thumbnail re-rendering.
+  - `GridCraft`: Expanded formula evaluation engine to support `=PRODUCT()`, `=MEDIAN()`, and `=CONCATENATE()`, along with existing arithmetic, `=SUM()`, `=AVERAGE()`, `=COUNT()`, `=MIN()`, `=MAX()`, and logical `=IF()`.
+  - `DeckCraft`: Added z-index element layering controls (▲ Forward / ▼ Backward) to reorder presentation elements in both the live editing stage and full-screen presenter mode.
+  - `PhotoCraft`: Audited 7-blend mode layer compositor, scanline flood fill, undo/redo state stack, and math-accurate adjustment filters (brightness, contrast, invert, grayscale, sepia).
+  - `WordCraft`: Confirmed ISO/IEC 29500 OpenXML `.docx` package creation via JSZip, Mammoth import, A4 page margins, and rich typography.
+  - `FilmCraft`: Verified multi-track timeline, frame-accurate timecode (`HH:MM:SS:FF`), razor split tool (`S`), and in-browser MediaRecorder video export.
+  - `SoundCraft`: Verified 4-track Web Audio mixer, stereo panning, solo/mute routing, live microphone recording, biquad EQ, reverb delay, and 16-bit linear PCM WAV master rendering.
+
+### Priority 4: 3D Zombies Survival Game Repairs & Assets
+- **Camera Euler Defect Root Cause:** The camera was previously rotated with default `'XYZ'` Euler order via `camera.rotation.y = yaw; camera.rotation.x = pitch;` while shooting raycasts used a separate Euler instance with `'YXZ'` order. This mismatch caused gimbal drift, tilt roll instability, and bullet raycasts that diverged from the screen crosshair.
+- **Camera Repairs:**
+  - Configured `camera.rotation.order = "YXZ"` on camera initialization.
+  - Unified orientation update to `camera.rotation.set(player.pitch, player.yaw, 0, "YXZ")`.
+  - Raycaster now derives its origin and direction directly from `camera.getWorldDirection()` and camera orientation vectors (`right` / `up` from `camera.quaternion`), guaranteeing 100% crosshair alignment.
+  - Added mouse delta sanitization (`Math.abs(delta) > 250px` discard) to prevent initial snap/flip glitches on pointer lock acquisition.
+  - Added window `blur` and pointer lock release handlers to reset input keys and firing state, preventing continuous sliding.
+- **Visual Assets & Articulated Models:**
+  - Replaced flat solid box geometry with procedurally generated high-detail Canvas2D textures: Bunker Floor (expansion seams & aggregate), Bunker Walls (horizontal masonry courses & water streaks), Hazard Pillars (diagonal warning bands), and Military Supply Crates (wood planks, steel brackets, stenciled markings).
+  - Built multi-part 3D viewmodels for all 3 weapons (M1911 Pistol, Trench Shotgun, Assault Rifle) with dynamic switching on slot selection.
+  - Upgraded zombie meshes into articulated hierarchical groups with jointed neck, shoulder, and hip pivots, executing authentic limping stride animations, reaching arm clawing, and head twitches during pursuit.
+- **Documentation:** Created `GAME_ASSETS_AND_LICENSES.md` detailing asset generation algorithms, Three.js shaders, Web Audio synthesizer architectures, and MIT/CC0 open-source licensing.
+
+---
+
 ## Tool Feature Matrix & Implementation Status
 
 | Tool | Status | Type | Technical Implementation | Offline / `file://` Verified |
@@ -64,6 +105,11 @@
   - Added 3-band Equalizer (flat, bass boost, treble boost, vocal enhance).
   - Built 3-mode real-time visualizer (gold circular wave, frequency bars, ambient pulse).
   - Memory cleanup and mobile lockscreen MediaSession API integration.
+  - **Second-Pass Repair (Priority 1): Hidden Player Bar Layout Defect Fixed**
+    - *Root Cause:* `#wrapper` was sized with `height: calc(100% - var(--player-bar-height))` while the body had `display: flex; flex-direction: column; overflow: hidden;` containing 3 children: `.top-bar-container` (48px), `#wrapper`, and `.player-bar` (84px). Because `#wrapper` did not account for `.top-bar-container`'s 48px height, the cumulative height exceeded the viewport by exactly 48px, pushing `.player-bar` partially/completely off-screen.
+    - *Files Changed:* `RadioLocal/style.css`
+    - *Remedy:* Converted `#wrapper` to `flex: 1; min-height: 0; width: 100%;` and pinned `.player-bar` with `flex-shrink: 0; min-height: var(--player-bar-height);`. Added `flex-shrink: 0; height: var(--top-bar-height);` to `.top-bar-container`. Added Android safe-area padding `env(safe-area-inset-bottom)` and short viewport `@media (max-height: 480px)` breakpoint.
+    - *Verification:* Verified via Chromium headless CDP on desktop (1280x800) and Android mobile (390x844). Bounding rects confirm `topBar` (0–48px), `wrapper` (48–629px), and `playerBar` (629–713px) with `isFullyVisible: true` and all transport controls (shuffle, prev, play/pause, next, repeat, volume, scrubber) interactive.
 
 ### 3. Craft Applications Suite
 - **PdfCraft (`PdfCraft/`):** Full PDF workbench with left thumbnail strip, page rotation, deletion, PDF merging, vector annotation canvas (highlighter, pen, rectangle, text notes), and PDF export via `pdf-lib`.

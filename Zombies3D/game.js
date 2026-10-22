@@ -180,6 +180,7 @@
   scene.fog = new THREE.FogExp2(0x0c0b0a, 0.035);
 
   const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+  camera.rotation.order = "YXZ";
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setSize(width, height);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -217,27 +218,167 @@
   // Procedural Concrete Texture for Floor
   function createConcreteTexture() {
     const canvas = document.createElement("canvas");
-    canvas.width = 256;
-    canvas.height = 256;
+    canvas.width = 512;
+    canvas.height = 512;
     const ctx = canvas.getContext("2d");
-    ctx.fillStyle = "#1e1d1b";
-    ctx.fillRect(0, 0, 256, 256);
-    // Grid lines
-    ctx.strokeStyle = "#141312";
+    ctx.fillStyle = "#1c1b19";
+    ctx.fillRect(0, 0, 512, 512);
+    // Grid seams
+    ctx.strokeStyle = "#121110";
     ctx.lineWidth = 4;
-    ctx.strokeRect(0, 0, 256, 256);
-    // Speckle noise
-    for (let i = 0; i < 2000; i++) {
-      const x = Math.random() * 256;
-      const y = Math.random() * 256;
-      ctx.fillStyle = Math.random() > 0.5 ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.06)";
-      ctx.fillRect(x, y, 2, 2);
+    ctx.strokeRect(0, 0, 512, 512);
+    // Speckle noise & concrete aggregate
+    for (let i = 0; i < 4000; i++) {
+      const x = Math.random() * 512;
+      const y = Math.random() * 512;
+      ctx.fillStyle = Math.random() > 0.5 ? "rgba(255,255,255,0.035)" : "rgba(0,0,0,0.08)";
+      ctx.fillRect(x, y, Math.random() * 3 + 1, Math.random() * 3 + 1);
     }
     const texture = new THREE.CanvasTexture(canvas);
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(12, 12);
+    texture.repeat.set(10, 10);
     return texture;
+  }
+
+  // Procedural Bunker Wall Texture
+  function createBunkerWallTexture() {
+    const canvas = document.createElement("canvas");
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#262421";
+    ctx.fillRect(0, 0, 512, 512);
+    // Horizontal mortar courses
+    ctx.strokeStyle = "#161513";
+    ctx.lineWidth = 6;
+    for (let y = 64; y < 512; y += 64) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(512, y);
+      ctx.stroke();
+      const offset = (y / 64) % 2 === 0 ? 0 : 64;
+      for (let x = offset; x < 512; x += 128) {
+        ctx.beginPath();
+        ctx.moveTo(x, y - 64);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+      }
+    }
+    // Concrete weathering
+    for (let i = 0; i < 35; i++) {
+      const x = Math.random() * 512;
+      const h = Math.random() * 220 + 40;
+      const grad = ctx.createLinearGradient(x, 0, x, h);
+      grad.addColorStop(0, "rgba(0,0,0,0.22)");
+      grad.addColorStop(1, "transparent");
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, 0, Math.random() * 12 + 4, h);
+    }
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(6, 2);
+    return texture;
+  }
+
+  // Procedural Hazard Warning Stripes Texture
+  function createHazardTexture() {
+    const canvas = document.createElement("canvas");
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#eab308";
+    ctx.fillRect(0, 0, 256, 256);
+    ctx.fillStyle = "#18181b";
+    ctx.beginPath();
+    for (let i = -256; i < 512; i += 64) {
+      ctx.moveTo(i, 0);
+      ctx.lineTo(i + 32, 0);
+      ctx.lineTo(i + 32 + 256, 256);
+      ctx.lineTo(i + 256, 256);
+      ctx.closePath();
+    }
+    ctx.fill();
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(1, 4);
+    return texture;
+  }
+
+  // Procedural Military Supply Crate Texture
+  function createCrateTexture() {
+    const canvas = document.createElement("canvas");
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#3e3223";
+    ctx.fillRect(0, 0, 256, 256);
+    // Wood plank seams
+    ctx.strokeStyle = "#251d14";
+    ctx.lineWidth = 4;
+    for (let y = 64; y < 256; y += 64) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(256, y);
+      ctx.stroke();
+    }
+    // Iron corner reinforcement braces
+    ctx.fillStyle = "#1c1b18";
+    ctx.fillRect(0, 0, 36, 36);
+    ctx.fillRect(220, 0, 36, 36);
+    ctx.fillRect(0, 220, 36, 36);
+    ctx.fillRect(220, 220, 36, 36);
+    // Stencil text
+    ctx.fillStyle = "rgba(220, 200, 160, 0.45)";
+    ctx.font = "bold 22px monospace";
+    ctx.fillText("SUPPLY", 78, 136);
+    return new THREE.CanvasTexture(canvas);
+  }
+
+  // Procedural Zombie Rotting Skin Texture
+  let zombieSkinTexture = null;
+  function getZombieSkinTexture() {
+    if (!zombieSkinTexture) {
+      const canvas = document.createElement("canvas");
+      canvas.width = 128;
+      canvas.height = 128;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#4a5342";
+      ctx.fillRect(0, 0, 128, 128);
+      for (let i = 0; i < 200; i++) {
+        const x = Math.random() * 128;
+        const y = Math.random() * 128;
+        ctx.fillStyle = Math.random() > 0.6 ? "rgba(20, 25, 18, 0.3)" : "rgba(80, 40, 40, 0.25)";
+        ctx.fillRect(x, y, Math.random() * 6 + 2, Math.random() * 6 + 2);
+      }
+      zombieSkinTexture = new THREE.CanvasTexture(canvas);
+    }
+    return zombieSkinTexture;
+  }
+
+  // Procedural Zombie Shirt Texture
+  let zombieShirtTexture = null;
+  function getZombieShirtTexture() {
+    if (!zombieShirtTexture) {
+      const canvas = document.createElement("canvas");
+      canvas.width = 128;
+      canvas.height = 128;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#2d2a28";
+      ctx.fillRect(0, 0, 128, 128);
+      for (let i = 0; i < 24; i++) {
+        const x = Math.random() * 128;
+        const y = Math.random() * 128;
+        ctx.fillStyle = "rgba(130, 20, 20, 0.5)";
+        ctx.beginPath();
+        ctx.arc(x, y, Math.random() * 8 + 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      zombieShirtTexture = new THREE.CanvasTexture(canvas);
+    }
+    return zombieShirtTexture;
   }
 
   // Arena Geometry: Bunker 50x50m
@@ -256,8 +397,8 @@
   ceiling.position.y = 6;
   scene.add(ceiling);
 
-  // Outer Walls
-  const wallMat = new THREE.MeshLambertMaterial({ color: 0x242220 });
+  // Outer Walls with procedural concrete block textures
+  const wallMat = new THREE.MeshLambertMaterial({ map: createBunkerWallTexture() });
   const wallHeight = 6;
   const wallHalf = 25;
 
@@ -275,10 +416,10 @@
     scene.add(wall);
   });
 
-  // Pillars & Obstacles
+  // Pillars & Obstacles with hazard warning bands
   const obstacles = [];
   const pillarGeo = new THREE.BoxGeometry(3, wallHeight, 3);
-  const pillarMat = new THREE.MeshLambertMaterial({ color: 0x2b2826 });
+  const pillarMat = new THREE.MeshLambertMaterial({ map: createHazardTexture() });
 
   const pillarCoords = [
     [-10, -10],
@@ -294,9 +435,9 @@
     obstacles.push({ x: px, z: pz, radius: 2.2 });
   });
 
-  // Crates / Cover
+  // Crates / Cover with wooden plank & iron bracket textures
   const crateGeo = new THREE.BoxGeometry(2, 1.6, 2);
-  const crateMat = new THREE.MeshLambertMaterial({ color: 0x3d3023 });
+  const crateMat = new THREE.MeshLambertMaterial({ map: createCrateTexture() });
   const crateCoords = [
     [-3, -15],
     [5, -15],
@@ -417,13 +558,75 @@
 
   // 3D Gun Viewmodel attached to Camera
   const gunGroup = new THREE.Group();
-  const gunBarrelGeo = new THREE.BoxGeometry(0.08, 0.1, 0.45);
-  const gunMat = new THREE.MeshLambertMaterial({ color: 0x1f1d1b });
-  const gunMesh = new THREE.Mesh(gunBarrelGeo, gunMat);
-  gunGroup.add(gunMesh);
   gunGroup.position.set(0.25, -0.22, -0.45);
   camera.add(gunGroup);
   scene.add(camera);
+
+  // Detailed 3D Gun Viewmodels
+  function buildViewModel(weaponIndex) {
+    while (gunGroup.children.length > 0) {
+      gunGroup.remove(gunGroup.children[0]);
+    }
+
+    const darkMetalMat = new THREE.MeshLambertMaterial({ color: 0x1f2024 });
+    const woodGripMat = new THREE.MeshLambertMaterial({ color: 0x4a3020 });
+    const chromeMat = new THREE.MeshLambertMaterial({ color: 0x8e8e93 });
+
+    if (weaponIndex === 0) {
+      // M1911 Pistol
+      const slide = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, 0.34), darkMetalMat);
+      slide.position.set(0, 0.04, -0.05);
+      gunGroup.add(slide);
+      const grip = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.18, 0.1), woodGripMat);
+      grip.position.set(0, -0.08, 0.06);
+      grip.rotation.x = 0.25;
+      gunGroup.add(grip);
+      const guard = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.06, 0.06), darkMetalMat);
+      guard.position.set(0, -0.04, 0.01);
+      gunGroup.add(guard);
+      const sight = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.02, 0.02), chromeMat);
+      sight.position.set(0, 0.09, -0.2);
+      gunGroup.add(sight);
+    } else if (weaponIndex === 1) {
+      // Trench Shotgun
+      const barrel1 = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.65), darkMetalMat);
+      barrel1.rotation.x = Math.PI / 2;
+      barrel1.position.set(-0.02, 0.03, -0.2);
+      gunGroup.add(barrel1);
+      const barrel2 = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.65), darkMetalMat);
+      barrel2.rotation.x = Math.PI / 2;
+      barrel2.position.set(0.02, 0.03, -0.2);
+      gunGroup.add(barrel2);
+      const pump = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.08, 0.2), woodGripMat);
+      pump.position.set(0, -0.01, -0.2);
+      gunGroup.add(pump);
+      const stock = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.12, 0.35), woodGripMat);
+      stock.position.set(0, -0.05, 0.2);
+      gunGroup.add(stock);
+    } else if (weaponIndex === 2) {
+      // Assault Rifle
+      const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.1, 0.45), darkMetalMat);
+      receiver.position.set(0, 0.02, -0.05);
+      gunGroup.add(receiver);
+      const rifleBarrel = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.45), darkMetalMat);
+      rifleBarrel.rotation.x = Math.PI / 2;
+      rifleBarrel.position.set(0, 0.02, -0.42);
+      gunGroup.add(rifleBarrel);
+      const mag = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.2, 0.1), chromeMat);
+      mag.position.set(0, -0.12, -0.05);
+      mag.rotation.x = -0.3;
+      gunGroup.add(mag);
+      const rifleGrip = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.15, 0.08), woodGripMat);
+      rifleGrip.position.set(0, -0.09, 0.1);
+      rifleGrip.rotation.x = 0.3;
+      gunGroup.add(rifleGrip);
+      const handle = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.04, 0.2), darkMetalMat);
+      handle.position.set(0, 0.09, -0.02);
+      gunGroup.add(handle);
+    }
+  }
+
+  buildViewModel(0);
 
   // Muzzle Flash
   const flashLight = new THREE.PointLight(0xffaa22, 0, 8);
@@ -447,42 +650,81 @@
     new THREE.Vector3(22, 0, 22)
   ];
 
-  // Create Zombie Mesh
+  // Create Articulated Zombie Mesh
   function createZombieMesh() {
     const group = new THREE.Group();
 
-    // Torso
-    const torsoGeo = new THREE.BoxGeometry(0.7, 0.9, 0.4);
-    const torsoMat = new THREE.MeshLambertMaterial({ color: 0x3d3935 });
+    // Torso with torn bloodied shirt
+    const torsoGeo = new THREE.BoxGeometry(0.7, 0.88, 0.4);
+    const torsoMat = new THREE.MeshLambertMaterial({ map: getZombieShirtTexture(), color: 0x3d3935 });
     const torso = new THREE.Mesh(torsoGeo, torsoMat);
     torso.position.y = 1.05;
     group.add(torso);
 
-    // Head
-    const headGeo = new THREE.BoxGeometry(0.4, 0.45, 0.4);
-    const headMat = new THREE.MeshLambertMaterial({ color: 0x5a6351 }); // sickly green
+    // Head Group with neck joint
+    const headGroup = new THREE.Group();
+    headGroup.position.set(0, 1.72, 0);
+    const headGeo = new THREE.BoxGeometry(0.42, 0.46, 0.42);
+    const headMat = new THREE.MeshLambertMaterial({ map: getZombieSkinTexture(), color: 0x5a6351 });
     const head = new THREE.Mesh(headGeo, headMat);
-    head.position.y = 1.72;
     head.userData.isHead = true;
-    group.add(head);
+    headGroup.add(head);
 
     // Glowing Yellow Eyes
     const eyeMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
-    const eye1 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.05), eyeMat);
-    eye1.position.set(-0.1, 1.75, 0.21);
-    const eye2 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.05), eyeMat);
-    eye2.position.set(0.1, 1.75, 0.21);
-    group.add(eye1);
-    group.add(eye2);
+    const eye1 = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.06), eyeMat);
+    eye1.position.set(-0.11, 0.05, 0.22);
+    const eye2 = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.06), eyeMat);
+    eye2.position.set(0.11, 0.05, 0.22);
+    headGroup.add(eye1);
+    headGroup.add(eye2);
+    group.add(headGroup);
 
-    // Outstretched Arms
-    const armMat = new THREE.MeshLambertMaterial({ color: 0x4f5446 });
-    const arm1 = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.7), armMat);
-    arm1.position.set(-0.45, 1.25, 0.35);
-    const arm2 = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.7), armMat);
-    arm2.position.set(0.45, 1.25, 0.35);
-    group.add(arm1);
-    group.add(arm2);
+    // Jointed Arms
+    const armMat = new THREE.MeshLambertMaterial({ map: getZombieSkinTexture(), color: 0x4f5446 });
+    const armGeo = new THREE.BoxGeometry(0.16, 0.72, 0.16);
+
+    const leftArmGroup = new THREE.Group();
+    leftArmGroup.position.set(-0.46, 1.45, 0);
+    const leftArm = new THREE.Mesh(armGeo, armMat);
+    leftArm.position.y = -0.32;
+    leftArmGroup.add(leftArm);
+    leftArmGroup.rotation.x = -Math.PI / 2.2;
+    group.add(leftArmGroup);
+
+    const rightArmGroup = new THREE.Group();
+    rightArmGroup.position.set(0.46, 1.45, 0);
+    const rightArm = new THREE.Mesh(armGeo, armMat);
+    rightArm.position.y = -0.32;
+    rightArmGroup.add(rightArm);
+    rightArmGroup.rotation.x = -Math.PI / 2.1;
+    group.add(rightArmGroup);
+
+    // Jointed Legs
+    const legMat = new THREE.MeshLambertMaterial({ color: 0x242220 });
+    const legGeo = new THREE.BoxGeometry(0.2, 0.75, 0.22);
+
+    const leftLegGroup = new THREE.Group();
+    leftLegGroup.position.set(-0.2, 0.65, 0);
+    const leftLeg = new THREE.Mesh(legGeo, legMat);
+    leftLeg.position.y = -0.35;
+    leftLegGroup.add(leftLeg);
+    group.add(leftLegGroup);
+
+    const rightLegGroup = new THREE.Group();
+    rightLegGroup.position.set(0.2, 0.65, 0);
+    const rightLeg = new THREE.Mesh(legGeo, legMat);
+    rightLeg.position.y = -0.35;
+    rightLegGroup.add(rightLeg);
+    group.add(rightLegGroup);
+
+    group.userData = {
+      headGroup,
+      leftArmGroup,
+      rightArmGroup,
+      leftLegGroup,
+      rightLegGroup
+    };
 
     return group;
   }
@@ -538,18 +780,29 @@
     if (isPointerLocked) {
       blocker.style.display = "none";
     } else {
+      // Clear movement keys and firing state on pointer lock release
+      keys.forward = keys.backward = keys.left = keys.right = keys.sprint = keys.jump = false;
+      isMouseDown = false;
       if (player.health > 0) {
         blocker.style.display = "flex";
       }
     }
   });
 
+  window.addEventListener("blur", () => {
+    keys.forward = keys.backward = keys.left = keys.right = keys.sprint = keys.jump = false;
+    isMouseDown = false;
+  });
+
   document.addEventListener("mousemove", (e) => {
     if (!isPointerLocked) return;
+    // Discard anomalous large delta spikes from browser locking / unlocking
+    if (Math.abs(e.movementX) > 250 || Math.abs(e.movementY) > 250) return;
     const sens = 0.0022;
     player.yaw -= e.movementX * sens;
     player.pitch -= e.movementY * sens;
-    player.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, player.pitch));
+    // Clamp pitch to avoid gimbal inversion
+    player.pitch = Math.max(-Math.PI / 2.15, Math.min(Math.PI / 2.15, player.pitch));
   });
 
   document.addEventListener("keydown", (e) => {
@@ -606,6 +859,7 @@
     if (slotIdx < player.inventory.length) {
       player.currentWeaponIdx = slotIdx;
       player.isReloading = false;
+      buildViewModel(player.inventory[slotIdx]);
       updateWeaponHUD();
     }
   }
@@ -636,18 +890,21 @@
     // Gun Recoil Kick
     gunGroup.position.z = -0.36;
 
-    // Raycast Shooting
+    // Raycast Shooting aligned directly with camera world direction
     const raycaster = new THREE.Raycaster();
     const hitZombies = [];
+    const forward = new THREE.Vector3();
+    camera.getWorldDirection(forward);
+    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+    const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
 
     for (let p = 0; p < weapon.pellets; p++) {
-      let shootDir = new THREE.Vector3(0, 0, -1);
+      let shootDir = forward.clone();
       if (weapon.spread) {
-        shootDir.x += (Math.random() - 0.5) * weapon.spread;
-        shootDir.y += (Math.random() - 0.5) * weapon.spread;
+        shootDir.addScaledVector(right, (Math.random() - 0.5) * weapon.spread);
+        shootDir.addScaledVector(up, (Math.random() - 0.5) * weapon.spread);
         shootDir.normalize();
       }
-      shootDir.applyEuler(new THREE.Euler(player.pitch, player.yaw, 0, "YXZ"));
 
       raycaster.set(camera.position, shootDir);
 
@@ -967,11 +1224,9 @@
       player.pos.x = nextX;
       player.pos.z = nextZ;
 
-      // Camera Positioning & Rotation
+      // Camera Positioning & Orientation (Pure YXZ Euler order, no gimbal lock)
       camera.position.copy(player.pos);
-      camera.rotation.set(0, 0, 0);
-      camera.rotation.y = player.yaw;
-      camera.rotation.x = player.pitch;
+      camera.rotation.set(player.pitch, player.yaw, 0, "YXZ");
 
       // Check Wall Buy Interaction Prompt
       checkInteractionPrompt();
@@ -986,9 +1241,20 @@
         advanceRound();
       }
 
-      // Update Zombies AI
+      // Update Zombies AI & Shambling Limb Animation
       zombiesAlive.forEach((z) => {
-        z.animCycle += dt * 6;
+        z.animCycle += dt * (z.speed * 2.2);
+        const limbStride = Math.sin(z.animCycle);
+
+        // Articulated limbs animation
+        if (z.mesh.userData && z.mesh.userData.leftLegGroup) {
+          z.mesh.userData.leftLegGroup.rotation.x = limbStride * 0.55;
+          z.mesh.userData.rightLegGroup.rotation.x = -limbStride * 0.55;
+          z.mesh.userData.leftArmGroup.rotation.x = -Math.PI / 2.2 + Math.sin(z.animCycle * 0.8) * 0.15;
+          z.mesh.userData.rightArmGroup.rotation.x = -Math.PI / 2.1 - Math.sin(z.animCycle * 0.8) * 0.15;
+          z.mesh.userData.headGroup.rotation.z = Math.sin(z.animCycle * 0.4) * 0.1;
+        }
+
         const dx = player.pos.x - z.mesh.position.x;
         const dz = player.pos.z - z.mesh.position.z;
         const dist = Math.hypot(dx, dz);
@@ -996,8 +1262,8 @@
         // Face player
         z.mesh.rotation.y = Math.atan2(dx, dz);
 
-        // Walking / Limping Animation Bob
-        z.mesh.position.y = Math.abs(Math.sin(z.animCycle)) * 0.12;
+        // Shambling / limping bob
+        z.mesh.position.y = Math.abs(limbStride) * 0.08;
 
         // Move towards player if outside melee range
         if (dist > 1.4) {

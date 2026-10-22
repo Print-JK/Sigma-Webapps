@@ -169,6 +169,8 @@
       footer.innerHTML = `
         <span>Page ${pageIndex}</span>
         <div class="thumbnail-actions">
+          <button class="thumb-btn" title="Move Page Up" onclick="event.stopPropagation(); window.PdfCraft.movePageUp(${pageIndex})">▲</button>
+          <button class="thumb-btn" title="Move Page Down" onclick="event.stopPropagation(); window.PdfCraft.movePageDown(${pageIndex})">▼</button>
           <button class="thumb-btn" title="Rotate 90° Clockwise" onclick="event.stopPropagation(); window.PdfCraft.rotatePage(${pageIndex})">↻</button>
           <button class="thumb-btn" title="Delete Page" onclick="event.stopPropagation(); window.PdfCraft.deletePage(${pageIndex})">🗑</button>
         </div>
@@ -193,6 +195,52 @@
 
   function updatePageIndicator() {
     pageIndicator.innerText = `Page ${state.currentPage} of ${state.numPages}`;
+  }
+
+  async function movePageUp(pageNumber) {
+    if (pageNumber <= 1) return;
+    const idx = pageNumber - 1;
+    // Swap in pagesData
+    const temp = state.pagesData[idx];
+    state.pagesData[idx] = state.pagesData[idx - 1];
+    state.pagesData[idx - 1] = temp;
+
+    // Rebuild pdfLibDoc in new order
+    const newDoc = await PDFDocument.create();
+    const order = [...Array(state.numPages).keys()];
+    [order[idx - 1], order[idx]] = [order[idx], order[idx - 1]];
+    const copied = await newDoc.copyPages(state.pdfLibDoc, order);
+    copied.forEach(p => newDoc.addPage(p));
+    state.pdfLibDoc = newDoc;
+
+    const bytes = await state.pdfLibDoc.save();
+    state.pdfDoc = await pdfjsLib.getDocument({ data: bytes }).promise;
+    state.currentPage = pageNumber - 1;
+    await renderCurrentPage();
+    await renderThumbnails();
+  }
+
+  async function movePageDown(pageNumber) {
+    if (pageNumber >= state.numPages) return;
+    const idx = pageNumber - 1;
+    // Swap in pagesData
+    const temp = state.pagesData[idx];
+    state.pagesData[idx] = state.pagesData[idx + 1];
+    state.pagesData[idx + 1] = temp;
+
+    // Rebuild pdfLibDoc in new order
+    const newDoc = await PDFDocument.create();
+    const order = [...Array(state.numPages).keys()];
+    [order[idx], order[idx + 1]] = [order[idx + 1], order[idx]];
+    const copied = await newDoc.copyPages(state.pdfLibDoc, order);
+    copied.forEach(p => newDoc.addPage(p));
+    state.pdfLibDoc = newDoc;
+
+    const bytes = await state.pdfLibDoc.save();
+    state.pdfDoc = await pdfjsLib.getDocument({ data: bytes }).promise;
+    state.currentPage = pageNumber + 1;
+    await renderCurrentPage();
+    await renderThumbnails();
   }
 
   // Page Operations
@@ -501,7 +549,9 @@
   // Expose for thumbnail callbacks
   window.PdfCraft = {
     rotatePage,
-    deletePage
+    deletePage,
+    movePageUp,
+    movePageDown
   };
 
 })();

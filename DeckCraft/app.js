@@ -379,6 +379,34 @@
     }
   });
 
+  // Element Layering
+  function bringForward() {
+    if (!selectedElementId) return;
+    const slide = getCurrentSlide();
+    const idx = slide.elements.findIndex((el) => el.id === selectedElementId);
+    if (idx !== -1 && idx < slide.elements.length - 1) {
+      const temp = slide.elements[idx];
+      slide.elements[idx] = slide.elements[idx + 1];
+      slide.elements[idx + 1] = temp;
+      renderStage();
+    }
+  }
+
+  function sendBackward() {
+    if (!selectedElementId) return;
+    const slide = getCurrentSlide();
+    const idx = slide.elements.findIndex((el) => el.id === selectedElementId);
+    if (idx > 0) {
+      const temp = slide.elements[idx];
+      slide.elements[idx] = slide.elements[idx - 1];
+      slide.elements[idx - 1] = temp;
+      renderStage();
+    }
+  }
+
+  document.getElementById("btnBringForward")?.addEventListener("click", bringForward);
+  document.getElementById("btnSendBackward")?.addEventListener("click", sendBackward);
+
   // Delete Element
   function deleteElement() {
     if (!selectedElementId) return;

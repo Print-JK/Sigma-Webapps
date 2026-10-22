@@ -120,6 +120,15 @@
           return vals.length ? Math.min(...vals) : 0;
         } else if (fn === "MAX") {
           return vals.length ? Math.max(...vals) : 0;
+        } else if (fn === "PRODUCT") {
+          return vals.length ? vals.reduce((a, b) => a * b, 1) : 0;
+        } else if (fn === "MEDIAN") {
+          if (!vals.length) return 0;
+          const sorted = [...vals].sort((a, b) => a - b);
+          const mid = Math.floor(sorted.length / 2);
+          return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+        } else if (fn === "CONCATENATE") {
+          return getRangeRawStrings(range).join("");
         }
       }
 
@@ -178,6 +187,29 @@
       }
     }
     return values;
+  }
+
+  // Range raw string helper for CONCATENATE
+  function getRangeRawStrings(rangeStr) {
+    const parts = rangeStr.split(":");
+    if (parts.length !== 2) return [];
+    const start = parseCoord(parts[0]);
+    const end = parseCoord(parts[1]);
+    if (!start || !end) return [];
+
+    const minR = Math.min(start.row, end.row);
+    const maxR = Math.max(start.row, end.row);
+    const minC = Math.min(start.col, end.col);
+    const maxC = Math.max(start.col, end.col);
+
+    const strings = [];
+    for (let r = minR; r <= maxR; r++) {
+      for (let c = minC; c <= maxC; c++) {
+        const cell = getCell(r, c);
+        if (cell && cell.raw) strings.push(cell.raw);
+      }
+    }
+    return strings;
   }
 
   // Number Formatter
