@@ -142,6 +142,10 @@ body {
   color: #fbbf24;
 }
 
+.tool-icon-btn img { width:20px; height:20px; filter:invert(1); display:block; }
+.adjust-slider { display:flex; align-items:center; justify-content:space-between; gap:6px; padding:4px 2px; color:var(--text-muted); font-size:.68rem; }
+.adjust-slider input { width:95px; accent-color:#f59e0b; }
+
 /* Central Canvas Stage */
 .canvas-stage {
   flex: 1;

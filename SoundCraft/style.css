@@ -169,6 +169,20 @@ body {
   font-size: 0.7rem;
   color: var(--text-muted);
 }
+.limiter-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 112px;
+  color: var(--text-muted);
+  font-size: .7rem;
+}
+.limiter-controls label { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.limiter-controls input[type="checkbox"] { accent-color: #10b981; }
+.limiter-controls input[type="range"] { width: 104px; accent-color: #d4af37; }
+.limiter-controls span { font-variant-numeric: tabular-nums; }
 .slider-vertical input[type="range"] {
   writing-mode: bt-lr; /* IE */
   -webkit-appearance: slider-vertical;
@@ -252,6 +266,7 @@ body {
   background: #eab308;
   color: #000;
 }
+.track-toggle-btn.record-arm.active { background:#ef4444; color:#fff; border-color:#f87171; }
 
 .track-sliders {
   display: flex;
@@ -314,6 +329,11 @@ body {
   border-color: #fff;
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
 }
+
+.clip-trim-handle { position:absolute; z-index:5; top:0; bottom:0; width:7px; background:rgba(255,255,255,.8); opacity:.75; cursor:ew-resize; }
+.clip-trim-handle.left { left:0; }
+.clip-trim-handle.right { right:0; }
+.audio-clip:hover .clip-trim-handle { opacity:1; }
 
 .clip-header {
   position: absolute;

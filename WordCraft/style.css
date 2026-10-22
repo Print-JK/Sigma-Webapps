@@ -145,45 +145,132 @@ body {
   overflow-x: auto;
   background: #0d0c0b;
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   padding: 40px 20px 80px 20px;
   position: relative;
 }
 
 /* Realistic A4 Paper Page */
+.word-page-stage {
+  --paper-bg: #ffffff;
+  --page-width: 794px;
+  --page-height: 1123px;
+  --page-gap: 40px;
+  --page-stride: calc(var(--page-width) + var(--page-gap));
+  position: relative;
+  flex: 0 0 auto;
+  width: 794px;
+  height: 1123px;
+}
+.word-page-backplates {
+  position: absolute;
+  inset: 0 auto auto 0;
+  height: var(--page-height);
+  pointer-events: none;
+  z-index: 0;
+}
+.word-page-backplate {
+  position: absolute;
+  top: 0;
+  width: var(--page-width);
+  height: var(--page-height);
+  box-sizing: border-box;
+  border-radius: 2px;
+  background: var(--paper-bg);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, .6);
+}
+.word-page-stage.theme-dark .word-page-backplate {
+  box-shadow: 0 10px 40px rgba(0, 0, 0, .9);
+}
+.word-page-furniture {
+  position: absolute;
+  inset: 0 auto auto 0;
+  height: var(--page-height);
+  z-index: 2;
+  pointer-events: none;
+}
+.word-page-furniture-page {
+  position: absolute;
+  top: 0;
+  width: var(--page-width);
+  height: var(--page-height);
+  pointer-events: none;
+}
+.word-page-furniture input {
+  position: absolute;
+  left: 96px;
+  width: 602px;
+  height: 24px;
+  box-sizing: border-box;
+  padding: 2px 4px;
+  border: 1px dashed transparent;
+  border-radius: 3px;
+  outline: none;
+  background: transparent;
+  color: #777;
+  font: 11px/18px "Segoe UI", Arial, sans-serif;
+  text-align: center;
+  pointer-events: auto;
+}
+.word-page-furniture input:hover,
+.word-page-furniture input:focus { border-color: rgba(100, 120, 140, .48); background: rgba(120, 140, 160, .08); }
+.word-page-furniture input::placeholder { color: #999; opacity: .7; }
+.word-page-furniture .page-header-field { top: 30px; }
+.word-page-furniture .page-footer-field { bottom: 26px; }
+.word-page-stage.theme-dark .word-page-furniture input { color: #c7c0b8; }
+.word-page-stage.theme-dark .word-page-furniture input::placeholder { color: #817b74; }
 .word-page {
+  --page-margin: 96px;
+  --page-width: 794px;
+  --page-height: 1123px;
+  --page-gap: 40px;
+  --page-stride: calc(var(--page-width) + var(--page-gap));
+  --body-width: calc(var(--page-width) - var(--page-margin) - var(--page-margin));
+  --column-gap: calc(var(--page-gap) + var(--page-margin) + var(--page-margin));
   width: 794px; /* A4 standard width at 96 DPI */
+  min-width: 794px;
+  flex: 0 0 794px;
+  height: 1123px;
   min-height: 1123px; /* A4 standard height at 96 DPI */
-  background: #ffffff;
+  background: transparent;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  column-width: var(--body-width);
+  column-gap: var(--column-gap);
+  column-fill: auto;
+  column-rule: 0 solid transparent;
   color: #1a1a1a;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
-  padding: 96px 96px; /* 1-inch margins */
+  box-shadow: none;
+  padding: var(--page-margin); /* 1-inch margins */
   border-radius: 2px;
   outline: none;
   font-family: "Calibri", "Segoe UI", Arial, sans-serif;
   font-size: 11pt;
   line-height: 1.6;
   box-sizing: border-box;
-  transition: all 0.2s ease;
+  transition: color 0.2s ease;
+  orphans: 2;
+  widows: 2;
 }
 
 /* Paper Theme Options */
 .word-page.theme-parchment {
-  background: #fdfbf7;
   color: #2b2b2b;
 }
 .word-page.theme-dark {
-  background: #1e1c1a;
   color: #e5e5e5;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9);
 }
+.word-page-stage.theme-parchment { --paper-bg: #fdfbf7; }
+.word-page-stage.theme-dark { --paper-bg: #1e1c1a; box-shadow: 0 10px 40px rgba(0, 0, 0, .9); }
 
 /* Margins */
 .word-page.margin-narrow {
-  padding: 48px 48px;
+  --page-margin: 48px;
 }
 .word-page.margin-wide {
-  padding: 144px 144px;
+  --page-margin: 144px;
 }
 
 /* Document Elements inside Editable Page */
@@ -255,6 +342,22 @@ body {
   cursor: pointer;
 }
 
+.word-page .doc-subtitle { font-weight: 400; letter-spacing: 0.02em; }
+.word-page .word-page-break {
+  height: 28px;
+  margin: 28px -36px;
+  border-top: 1px dashed #789;
+  border-bottom: 1px dashed #789;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #789;
+  font: 11px/1 sans-serif;
+  background: rgba(120, 150, 170, 0.08);
+  page-break-after: always;
+  break-after: column;
+}
+
 /* Status Bar */
 .word-statusbar {
   display: flex;
@@ -323,11 +426,31 @@ body {
     padding: 0 !important;
     background: transparent !important;
     overflow: visible !important;
+    display: block !important;
   }
+  .word-page-stage {
+    width: auto !important;
+    height: auto !important;
+    box-shadow: none !important;
+  }
+  .word-page-backplates { display: none !important; }
+  .word-page-furniture { display: none !important; }
   .word-page {
+    position: static !important;
     box-shadow: none !important;
     padding: 0 !important;
     width: 100% !important;
+    min-width: 0 !important;
+    flex: none !important;
+    height: auto !important;
     min-height: auto !important;
+    column-width: auto !important;
+    column-gap: 0 !important;
+    column-fill: auto !important;
+    background: none !important;
+  }
+  .word-page .word-page-break {
+    break-after: page;
+    page-break-after: always;
   }
 }

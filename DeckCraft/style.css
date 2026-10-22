@@ -234,6 +234,17 @@ body {
   box-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
 }
 
+.resize-handle { display:none; position:absolute; width:9px; height:9px; border:1px solid #111; border-radius:50%; background:#fbbf24; z-index:20; }
+.slide-el.selected .resize-handle { display:block; }
+.resize-handle[data-direction="n"] { top:-5px; left:calc(50% - 4px); cursor:ns-resize; }
+.resize-handle[data-direction="s"] { bottom:-5px; left:calc(50% - 4px); cursor:ns-resize; }
+.resize-handle[data-direction="e"] { right:-5px; top:calc(50% - 4px); cursor:ew-resize; }
+.resize-handle[data-direction="w"] { left:-5px; top:calc(50% - 4px); cursor:ew-resize; }
+.resize-handle[data-direction="ne"] { right:-5px; top:-5px; cursor:nesw-resize; }
+.resize-handle[data-direction="nw"] { left:-5px; top:-5px; cursor:nwse-resize; }
+.resize-handle[data-direction="se"] { right:-5px; bottom:-5px; cursor:nwse-resize; }
+.resize-handle[data-direction="sw"] { left:-5px; bottom:-5px; cursor:nesw-resize; }
+
 .slide-text {
   outline: none;
   user-select: text;

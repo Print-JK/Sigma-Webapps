@@ -13,15 +13,18 @@
     tracks: [
       { id: "v1", type: "video", name: "Video 1", clips: [] },
       { id: "v2", type: "video", name: "Video 2 (Overlay)", clips: [] },
-      { id: "a1", type: "audio", name: "Audio 1", clips: [] }
+      { id: "a1", type: "audio", name: "Audio 1", clips: [] },
+      { id: "a2", type: "audio", name: "Audio 2", clips: [] }
     ],
     currentTime: 0,
     totalDuration: 60, // seconds
     pxPerSec: 25,
     isPlaying: false,
     selectedClipId: null,
+    selectedMediaId: null,
     animFrameId: null,
-    lastTick: 0
+    lastTick: 0,
+    audioCtx: null
   };
 
   // DOM Elements
@@ -34,6 +37,12 @@
   const playPauseBtn = document.getElementById("playPauseBtn");
   const timelineRuler = document.getElementById("timelineRuler");
   const tracksScrollArea = document.getElementById("tracksScrollArea");
+  const sourceMediaName = document.getElementById("sourceMediaName");
+  const sourceVideo = document.getElementById("sourceVideo");
+  const sourceImage = document.getElementById("sourceImage");
+  const sourceAudio = document.getElementById("sourceAudio");
+  const sourcePlaceholder = document.getElementById("sourcePlaceholder");
+  const addSourceButton = document.getElementById("btnAddSourceToTimeline");
 
   // Format Seconds to HH:MM:SS:FF Timecode
   function formatTimecode(secs) {
@@ -54,6 +63,7 @@
     const url = URL.createObjectURL(file);
     let duration = 5; // default for images
     let el = null;
+    let audioBuffer = null;
 
     if (isVideo) {
       el = document.createElement("video");
@@ -75,6 +85,11 @@
           res();
         };
       });
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) throw new Error("Audio decoding is not supported by this browser.");
+      state.audioCtx ||= new AudioContext();
+      const encodedAudio = await file.arrayBuffer();
+      audioBuffer = await state.audioCtx.decodeAudioData(encodedAudio);
     } else if (isImg) {
       el = new Image();
       el.src = url;
@@ -87,12 +102,14 @@
       name: file.name,
       type: isVideo ? "video" : (isAudio ? "audio" : "image"),
       duration: duration,
+      audioBuffer,
       element: el,
       url: url
     };
 
     state.mediaPool.push(mediaItem);
     renderMediaPoolUI();
+    selectSourceMedia(mediaItem.id);
 
     // Auto-add to Track 1 if timeline is empty
     if (state.tracks[0].clips.length === 0 && (isVideo || isImg)) {
@@ -106,6 +123,9 @@
     state.mediaPool.forEach((item) => {
       const div = document.createElement("div");
       div.className = "media-item";
+      div.dataset.mediaId = item.id;
+      div.draggable = true;
+      div.classList.toggle("selected", item.id === state.selectedMediaId);
       const icon = item.type === "video" ? "🎬" : (item.type === "audio" ? "🎵" : "🖼️");
       div.innerHTML = `
         <span>${icon}</span>
@@ -113,9 +133,41 @@
           <div style="font-weight:600; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${escapeHTML(item.name)}</div>
           <div style="font-size:0.72rem; color:var(--text-muted);">${item.type.toUpperCase()} &middot; ${Math.round(item.duration)}s</div>
         </div>
-        <button class="thumb-btn" title="Add to timeline" onclick="window.FilmCraft.addClip('${item.id}')">➕</button>
+        <button class="thumb-btn" title="Add to timeline" onclick="event.stopPropagation(); window.FilmCraft.addClip('${item.id}')">➕</button>
       `;
+      div.addEventListener("click", () => selectSourceMedia(item.id));
+      div.addEventListener("dragstart", event => {
+        event.dataTransfer.setData("application/x-filmcraft-media-id", item.id);
+        event.dataTransfer.setData("text/plain", item.id);
+        event.dataTransfer.effectAllowed = "copy";
+      });
       mediaListEl.appendChild(div);
+    });
+  }
+
+  function selectSourceMedia(mediaId) {
+    const item = state.mediaPool.find(media => media.id === mediaId);
+    if (!item) return;
+    state.selectedMediaId = item.id;
+    sourceMediaName.textContent = item.name;
+    addSourceButton.disabled = false;
+    sourceVideo.pause(); sourceAudio.pause();
+    sourceVideo.hidden = item.type !== "video";
+    sourceImage.hidden = item.type !== "image";
+    sourceAudio.hidden = item.type !== "audio";
+    sourcePlaceholder.hidden = true;
+    if (item.type === "video") {
+      sourceVideo.src = item.url;
+      sourceVideo.currentTime = 0;
+      sourceVideo.load();
+    } else if (item.type === "image") {
+      sourceImage.src = item.url;
+    } else {
+      sourceAudio.src = item.url;
+      sourceAudio.load();
+    }
+    mediaListEl.querySelectorAll(".media-item").forEach(node => {
+      node.classList.toggle("selected", node.dataset.mediaId === item.id);
     });
   }
 
@@ -139,16 +191,23 @@
       trackIndex: trackIndex,
       start: start,
       duration: Math.min(media.duration, 30),
-      trimStart: 0
+      trimStart: 0,
+      scale: 1,
+      opacity: 1,
+      x: 0,
+      y: 0
     };
 
     track.clips.push(clip);
+    refreshTimelineExtent();
     renderTimelineClips();
     renderPreviewFrame();
   }
 
   // Render Timeline Clips UI
   function renderTimelineClips() {
+    const canvas = document.querySelector(".tracks-canvas-container");
+    if (canvas) canvas.style.width = `${Math.max(1600, state.totalDuration * state.pxPerSec)}px`;
     state.tracks.forEach((track, tIdx) => {
       const row = document.getElementById(`trackRow_${tIdx}`);
       if (!row) return;
@@ -165,9 +224,41 @@
         clipEl.style.width = `${widthPx}px`;
         clipEl.innerText = media ? media.name : "Clip";
 
+        ["left", "right"].forEach((side) => {
+          const handle = document.createElement("span");
+          handle.className = `clip-trim-handle ${side}`;
+          handle.title = `Trim ${side} edge`;
+          handle.addEventListener("mousedown", (event) => {
+            event.preventDefault(); event.stopPropagation();
+            state.selectedClipId = clip.id;
+            const startX = event.clientX;
+            const original = { start: clip.start, duration: clip.duration, trimStart: clip.trimStart };
+            const move = (moveEvent) => {
+              const delta = (moveEvent.clientX - startX) / state.pxPerSec;
+              if (side === "left") {
+                const shift = Math.max(-original.trimStart, Math.min(original.duration - 0.1, delta));
+                clip.start = original.start + shift;
+                clip.trimStart = original.trimStart + shift;
+                clip.duration = original.duration - shift;
+              } else {
+                clip.duration = Math.max(0.1, Math.min(media.duration - clip.trimStart, original.duration + delta));
+              }
+              clipEl.style.left = `${clip.start * state.pxPerSec}px`;
+              clipEl.style.width = `${clip.duration * state.pxPerSec}px`;
+            };
+            const up = () => {
+              window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", up);
+              refreshTimelineExtent(); renderTimelineClips(); renderPreviewFrame();
+            };
+            window.addEventListener("mousemove", move); window.addEventListener("mouseup", up);
+          });
+          clipEl.appendChild(handle);
+        });
+
         clipEl.onclick = (e) => {
           e.stopPropagation();
           state.selectedClipId = clip.id;
+          syncClipInspector();
           renderTimelineClips();
         };
 
@@ -178,20 +269,31 @@
 
         clipEl.addEventListener("mousedown", (e) => {
           isDragging = true;
+          state.selectedClipId = clip.id;
           dragStartX = e.clientX;
           origStart = clip.start;
 
           const onMove = (mv) => {
             if (!isDragging) return;
             const deltaSec = (mv.clientX - dragStartX) / state.pxPerSec;
-            clip.start = Math.max(0, origStart + deltaSec);
+            clip.start = Math.max(0, Math.round((origStart + deltaSec) * 30) / 30);
             clipEl.style.left = `${clip.start * state.pxPerSec}px`;
           };
 
-          const onUp = () => {
+          const onUp = (upEvent) => {
             isDragging = false;
             window.removeEventListener("mousemove", onMove);
             window.removeEventListener("mouseup", onUp);
+            const destination = upEvent.target.closest(".track-row");
+            const destinationIndex = destination ? Number(destination.id.replace("trackRow_", "")) : tIdx;
+            const destinationTrack = state.tracks[destinationIndex];
+            const compatible = destinationTrack && ((media?.type === "audio") === (destinationTrack.type === "audio"));
+            if (compatible && destinationIndex !== tIdx) {
+              track.clips = track.clips.filter((item) => item !== clip);
+              clip.trackIndex = destinationIndex;
+              destinationTrack.clips.push(clip);
+            }
+            refreshTimelineExtent();
             renderTimelineClips();
             renderPreviewFrame();
           };
@@ -233,15 +335,15 @@
 
     // Create second clip
     const secondClip = {
+      ...targetClip,
       id: "clip_" + Math.random().toString(36).substr(2, 9),
-      mediaId: targetClip.mediaId,
-      trackIndex: targetClip.trackIndex,
       start: state.currentTime,
       duration: secondDuration,
       trimStart: targetClip.trimStart + cutPoint
     };
 
     targetTrack.clips.push(secondClip);
+    refreshTimelineExtent();
     renderTimelineClips();
     renderPreviewFrame();
   }
@@ -259,10 +361,15 @@
 
   // Seek Time
   function seek(time) {
-    state.currentTime = Math.max(0, Math.min(state.totalDuration, time));
+    state.currentTime = Math.max(0, Math.min(state.totalDuration, Math.round(time * 30) / 30));
     timecodeDisplay.innerText = formatTimecode(state.currentTime);
     playhead.style.left = `${state.currentTime * state.pxPerSec}px`;
     renderPreviewFrame();
+  }
+
+  function refreshTimelineExtent() {
+    const end = Math.max(0, ...state.tracks.flatMap((track) => track.clips.map((clip) => clip.start + clip.duration)));
+    state.totalDuration = Math.max(60, end + 1);
   }
 
   // Render Video Preview Frame At Current Playhead
@@ -280,18 +387,54 @@
 
           const localTime = clip.trimStart + (state.currentTime - clip.start);
 
+          prevCtx.save();
+          prevCtx.globalAlpha = clip.opacity ?? 1;
+          prevCtx.translate(previewCanvas.width / 2 + (clip.x || 0), previewCanvas.height / 2 + (clip.y || 0));
+          prevCtx.scale(clip.scale || 1, clip.scale || 1);
           if (media.type === "video") {
             if (Math.abs(media.element.currentTime - localTime) > 0.15) {
               media.element.currentTime = localTime;
             }
-            prevCtx.drawImage(media.element, 0, 0, previewCanvas.width, previewCanvas.height);
+            prevCtx.drawImage(media.element, -previewCanvas.width / 2, -previewCanvas.height / 2, previewCanvas.width, previewCanvas.height);
           } else if (media.type === "image") {
-            prevCtx.drawImage(media.element, 0, 0, previewCanvas.width, previewCanvas.height);
+            prevCtx.drawImage(media.element, -previewCanvas.width / 2, -previewCanvas.height / 2, previewCanvas.width, previewCanvas.height);
           }
+          prevCtx.restore();
         }
       }
     }
   }
+
+  function getSelectedClip() {
+    if (!state.selectedClipId) return null;
+    for (const track of state.tracks) {
+      const clip = track.clips.find((item) => item.id === state.selectedClipId);
+      if (clip) return clip;
+    }
+    return null;
+  }
+
+  function syncClipInspector() {
+    const clip = getSelectedClip();
+    ["clipScale", "clipOpacity", "clipPosX", "clipPosY"].forEach((id) => { document.getElementById(id).disabled = !clip; });
+    if (!clip) return;
+    document.getElementById("clipScale").value = clip.scale ?? 1;
+    document.getElementById("clipOpacity").value = clip.opacity ?? 1;
+    document.getElementById("clipPosX").value = clip.x ?? 0;
+    document.getElementById("clipPosY").value = clip.y ?? 0;
+    document.getElementById("clipScaleValue").value = `${Math.round((clip.scale ?? 1) * 100)}%`;
+    document.getElementById("clipOpacityValue").value = `${Math.round((clip.opacity ?? 1) * 100)}%`;
+  }
+
+  [["clipScale", "scale"], ["clipOpacity", "opacity"], ["clipPosX", "x"], ["clipPosY", "y"]].forEach(([id, key]) => {
+    document.getElementById(id).addEventListener("input", (event) => {
+      const clip = getSelectedClip();
+      if (!clip) return;
+      clip[key] = Number(event.target.value);
+      syncClipInspector();
+      renderPreviewFrame();
+    });
+  });
 
   // Playback Loop
   function togglePlayback() {
@@ -336,10 +479,56 @@
   // Video Export using MediaRecorder & Canvas Capture Stream
   async function exportVideo() {
     pausePlayback();
-    alert("Export started! The timeline will play through to encode your video.");
-
+    const videoClips = state.tracks.filter((track) => track.type === "video").flatMap((track) => track.clips);
+    if (!videoClips.length) return alert("Add at least one video or image clip before exporting.");
+    const allClips = state.tracks.flatMap((track) => track.clips);
+    const exportEnd = Math.max(0, ...allClips.map((clip) => clip.start + clip.duration));
     const stream = previewCanvas.captureStream(30);
-    const mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm" });
+    let audioSource = null;
+    let audioDestination = null;
+    const audioClips = state.tracks.filter((track) => track.type === "audio").flatMap((track) => track.clips);
+    try {
+      const clipsWithAudio = audioClips.map((clip) => ({
+        clip,
+        media: state.mediaPool.find((item) => item.id === clip.mediaId)
+      })).filter(({ media }) => media && media.audioBuffer);
+
+      if (clipsWithAudio.length) {
+        const OfflineContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!OfflineContext || !AudioContext) throw new Error("Audio rendering is not supported by this browser.");
+        state.audioCtx ||= new AudioContext();
+        if (state.audioCtx.state === "suspended") await state.audioCtx.resume();
+        const sampleRate = 44100;
+        const offline = new OfflineContext(2, Math.ceil(sampleRate * exportEnd), sampleRate);
+        clipsWithAudio.forEach(({ clip, media }) => {
+          const source = offline.createBufferSource();
+          source.buffer = media.audioBuffer;
+          source.connect(offline.destination);
+          source.start(clip.start, clip.trimStart || 0, clip.duration);
+        });
+        const mixedAudio = await offline.startRendering();
+        audioDestination = state.audioCtx.createMediaStreamDestination();
+        audioSource = state.audioCtx.createBufferSource();
+        audioSource.buffer = mixedAudio;
+        audioSource.connect(audioDestination);
+        audioDestination.stream.getAudioTracks().forEach((track) => stream.addTrack(track));
+      }
+    } catch (error) {
+      stream.getTracks().forEach((track) => track.stop());
+      return alert(`Could not render timeline audio: ${error.message}`);
+    }
+
+    const hasAudioTrack = stream.getAudioTracks().length > 0;
+    const mimeCandidates = hasAudioTrack
+      ? ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]
+      : ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
+    const mimeType = mimeCandidates.find((candidate) => MediaRecorder.isTypeSupported(candidate));
+    if (!mimeType) {
+      stream.getTracks().forEach((track) => track.stop());
+      return alert("This browser cannot record the local video export format.");
+    }
+    const mediaRecorder = new MediaRecorder(stream, { mimeType });
     const chunks = [];
 
     mediaRecorder.ondataavailable = (e) => {
@@ -355,18 +544,23 @@
       document.body.appendChild(a);
       a.click();
       a.remove();
-      alert("Export complete! Download started.");
+      if (audioSource) {
+        try { audioSource.stop(); } catch (e) {}
+      }
+      stream.getTracks().forEach((track) => track.stop());
     };
 
     seek(0);
     mediaRecorder.start();
+    if (audioSource) audioSource.start();
     startPlayback();
 
     // Auto-stop at end of duration
     const checkEnd = setInterval(() => {
-      if (state.currentTime >= 15 || !state.isPlaying) { // encode 15s sample or total
+      if (state.currentTime >= exportEnd || !state.isPlaying) {
         clearInterval(checkEnd);
         pausePlayback();
+        seek(exportEnd);
         mediaRecorder.stop();
       }
     }, 200);
@@ -390,11 +584,41 @@
   document.getElementById("btnSplit").addEventListener("click", splitClipAtPlayhead);
   document.getElementById("btnDelete").addEventListener("click", deleteSelectedClip);
   document.getElementById("btnExportVideo").addEventListener("click", exportVideo);
+  addSourceButton.addEventListener("click", () => {
+    const item = state.mediaPool.find(media => media.id === state.selectedMediaId);
+    if (item) window.FilmCraft.addClip(item.id);
+  });
 
   mediaFileInput.addEventListener("change", (e) => {
     Array.from(e.target.files).forEach((f) => importMedia(f));
   });
   document.getElementById("importMediaBtn").addEventListener("click", () => mediaFileInput.click());
+
+  state.tracks.forEach((track, index) => {
+    const row = document.getElementById(`trackRow_${index}`);
+    row.addEventListener("dragover", event => {
+      if (event.dataTransfer.types.includes("application/x-filmcraft-media-id") || event.dataTransfer.types.includes("text/plain")) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "copy";
+        row.classList.add("media-drop-target");
+      }
+    });
+    row.addEventListener("dragleave", event => {
+      if (!row.contains(event.relatedTarget)) row.classList.remove("media-drop-target");
+    });
+    row.addEventListener("drop", event => {
+      event.preventDefault();
+      row.classList.remove("media-drop-target");
+      const mediaId = event.dataTransfer.getData("application/x-filmcraft-media-id") || event.dataTransfer.getData("text/plain");
+      const media = state.mediaPool.find(item => item.id === mediaId);
+      if (!media) return;
+      const mediaTrackType = media.type === "audio" ? "audio" : "video";
+      if (track.type !== mediaTrackType) return;
+      const rect = row.getBoundingClientRect();
+      const startTime = Math.max(0, (event.clientX - rect.left + tracksScrollArea.scrollLeft) / state.pxPerSec);
+      addClipToTrack(media.id, index, startTime);
+    });
+  });
 
   // Keyboard Shortcuts
   window.addEventListener("keydown", (e) => {
@@ -410,10 +634,14 @@
 
   // Global helper for inline UI
   window.FilmCraft = {
-    addClip: (id) => addClipToTrack(id, 0)
+    addClip: (id) => {
+      const media = state.mediaPool.find((item) => item.id === id);
+      addClipToTrack(id, media && media.type === "audio" ? 2 : 0);
+    }
   };
 
   // Initial draw
   renderPreviewFrame();
+  syncClipInspector();
 
 })();

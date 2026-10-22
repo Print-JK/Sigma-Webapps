@@ -105,9 +105,21 @@
         <option value="h1">Heading 1</option>
         <option value="h2">Heading 2</option>
         <option value="h3">Heading 3</option>
+        <option value="h4">Heading 4</option>
+        <option value="h5">Heading 5</option>
+        <option value="h6">Heading 6</option>
+        <option value="subtitle">Subtitle</option>
         <option value="blockquote">Quote</option>
         <option value="pre">Code Block</option>
       </select>
+    </div>
+
+    <div class="ribbon-group">
+      <select id="lineSpacingSelect" class="ribbon-select" title="Paragraph line spacing">
+        <option value="1">1.0 line</option><option value="1.15" selected>1.15 lines</option>
+        <option value="1.5">1.5 lines</option><option value="2">2.0 lines</option>
+      </select>
+      <button id="btnPageBreak" class="ribbon-btn" title="Insert page break">↵ Page Break</button>
     </div>
 
     <!-- Alignment -->
@@ -129,6 +141,8 @@
     <!-- Inserts -->
     <div class="ribbon-group">
       <button id="btnInsertTable" class="ribbon-btn" title="Insert Table">⊞</button>
+      <button id="btnAddTableRow" class="ribbon-btn" title="Insert row below selection">+ Row</button>
+      <button id="btnAddTableColumn" class="ribbon-btn" title="Insert column after selection">+ Col</button>
       <button id="btnInsertImage" class="ribbon-btn" title="Insert Image">🖼</button>
       <input type="file" id="imageInput" accept="image/*" style="display: none;" />
       <button id="btnInsertLink" class="ribbon-btn" title="Insert Link">🔗</button>
@@ -157,6 +171,8 @@
 
   <!-- Document Viewport -->
   <main class="word-viewport">
+    <div id="wordPageStage" class="word-page-stage">
+    <div id="wordPageBackplates" class="word-page-backplates" aria-hidden="true"></div>
     <div id="wordCanvas" class="word-page" contenteditable="true" spellcheck="true">
       <h1>Welcome to WordCraft</h1>
       <p>This is your distraction-free, local-first word processor running 100% in your browser without any server or cloud dependencies.</p>
@@ -169,6 +185,8 @@
         <li><b>Zero-Telemetry Privacy:</b> All keystrokes, content, and files remain strictly inside your browser.</li>
       </ul>
       <p>Start typing, paste text, or open an existing file from the top bar to begin!</p>
+    </div>
+    <div id="wordPageFurniture" class="word-page-furniture" aria-label="Page header and footer fields"></div>
     </div>
   </main>
 
@@ -195,6 +213,8 @@
       <span id="wordCount">0 words</span>
       <span>•</span>
       <span id="charCount">0 characters</span>
+      <span>•</span>
+      <span id="pageCount">1 page</span>
       <span>•</span>
       <span id="readTime">0 min read</span>
     </div>

@@ -46,6 +46,7 @@
   let currentSlideIndex = 0;
   let selectedElementId = null;
   let isDragging = false;
+  let resizeState = null;
   let dragOffset = { x: 0, y: 0 };
   let presSlideIndex = 0;
 
@@ -96,6 +97,7 @@
       elDiv.style.top = `${el.y}px`;
       elDiv.style.width = `${el.width}px`;
       elDiv.style.height = `${el.height}px`;
+      elDiv.style.transform = `rotate(${el.rotation || 0}deg)`;
 
       if (el.type === "text") {
         elDiv.className += " slide-text";
@@ -106,7 +108,9 @@
         elDiv.innerHTML = el.text || "";
 
         elDiv.addEventListener("input", (e) => {
-          el.text = e.target.innerHTML;
+          const content = e.target.cloneNode(true);
+          content.querySelectorAll(".resize-handle").forEach((handle) => handle.remove());
+          el.text = content.innerHTML;
           renderThumbnails();
         });
       } else if (el.type === "rect") {
@@ -128,6 +132,18 @@
         img.src = el.src;
         elDiv.appendChild(img);
       }
+
+      ["n", "ne", "e", "se", "s", "sw", "w", "nw"].forEach((direction) => {
+        const handle = document.createElement("span");
+        handle.className = "resize-handle";
+        handle.contentEditable = "false";
+        handle.dataset.direction = direction;
+        handle.addEventListener("mousedown", (event) => {
+          event.preventDefault(); event.stopPropagation(); selectElement(el.id);
+          resizeState = { id: el.id, direction, startX: event.clientX, startY: event.clientY, x: el.x, y: el.y, width: el.width, height: el.height };
+        });
+        elDiv.appendChild(handle);
+      });
 
       // Dragging Interaction
       elDiv.addEventListener("mousedown", (e) => {
@@ -151,6 +167,18 @@
 
   // Dragging Mouse Move / Up
   window.addEventListener("mousemove", (e) => {
+    if (resizeState) {
+      const el = getCurrentSlide().elements.find((item) => item.id === resizeState.id);
+      if (!el) return;
+      const dx = e.clientX - resizeState.startX, dy = e.clientY - resizeState.startY, dir = resizeState.direction;
+      el.width = Math.max(24, resizeState.width + (dir.includes("e") ? dx : dir.includes("w") ? -dx : 0));
+      el.height = Math.max(20, resizeState.height + (dir.includes("s") ? dy : dir.includes("n") ? -dy : 0));
+      el.x = dir.includes("w") ? resizeState.x + resizeState.width - el.width : resizeState.x;
+      el.y = dir.includes("n") ? resizeState.y + resizeState.height - el.height : resizeState.y;
+      const elDiv = document.getElementById(el.id);
+      if (elDiv) { elDiv.style.width = `${el.width}px`; elDiv.style.height = `${el.height}px`; elDiv.style.left = `${el.x}px`; elDiv.style.top = `${el.y}px`; }
+      return;
+    }
     if (!isDragging) return;
     const el = getSelectedElement();
     if (!el) return;
@@ -174,6 +202,7 @@
   });
 
   window.addEventListener("mouseup", () => {
+    if (resizeState) { resizeState = null; renderStage(); return; }
     if (isDragging) {
       isDragging = false;
       renderThumbnails();
@@ -192,8 +221,34 @@
       if (el.fontSize) fontSizeSelect.value = el.fontSize;
       if (el.color) textColorPicker.value = el.color;
       if (el.fill) fillColorPicker.value = el.fill;
+      const rotation = el.rotation || 0;
+      document.getElementById("elementRotation").value = rotation;
+      document.getElementById("elementRotationValue").value = `${rotation}°`;
     }
   }
+
+  document.getElementById("elementRotation").addEventListener("input", (event) => {
+    const el = getSelectedElement();
+    if (!el) return;
+    el.rotation = Number(event.target.value);
+    document.getElementById("elementRotationValue").value = `${el.rotation}°`;
+    const node = document.getElementById(el.id);
+    if (node) node.style.transform = `rotate(${el.rotation}deg)`;
+    renderThumbnails();
+  });
+
+  document.getElementById("btnApplyLayout").addEventListener("click", () => {
+    const slide = getCurrentSlide();
+    const title = (text, x, y, width, size, color = "#ffffff") => ({ id: generateId("text"), type: "text", x, y, width, height: size * 2, text, fontSize: `${size}px`, color, fontWeight: "bold" });
+    const body = (text, x, y, width) => ({ id: generateId("text"), type: "text", x, y, width, height: 260, text, fontSize: "24px", color: "#e5e7eb", fontWeight: "normal" });
+    const preset = document.getElementById("slideLayoutSelect").value;
+    if (preset === "blank") slide.elements = [];
+    if (preset === "title") slide.elements = [title("Presentation Title", 80, 150, 800, 48), body("Subtitle", 84, 235, 780)];
+    if (preset === "content") slide.elements = [title("Slide Title", 64, 42, 830, 38), body("Add your content here…", 68, 125, 820)];
+    if (preset === "columns") slide.elements = [title("Slide Title", 64, 38, 830, 38), body("Left column…", 68, 125, 390), body("Right column…", 500, 125, 390)];
+    selectedElementId = null;
+    renderStage();
+  });
 
   // Click Stage Deselect
   slideStage.addEventListener("mousedown", (e) => {
@@ -610,6 +665,16 @@
     const pptx = new window.PptxGenJS();
     pptx.layout = "LAYOUT_16x9";
     const title = deckTitleInput.value.trim() || "Presentation";
+    const pptColor = (value, fallback = "333333") => {
+      const text = String(value || "").trim();
+      const hex = text.match(/^#?([\da-f]{6})$/i);
+      if (hex) return { color: hex[1].toUpperCase(), transparency: 0 };
+      const rgb = text.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)$/i);
+      if (!rgb) return { color: fallback, transparency: 0 };
+      const color = [rgb[1], rgb[2], rgb[3]].map(value => Math.min(255, Number(value)).toString(16).padStart(2, "0")).join("").toUpperCase();
+      const alpha = rgb[4] === undefined ? 1 : Math.max(0, Math.min(1, Number(rgb[4])));
+      return { color, transparency: Math.round((1 - alpha) * 100) };
+    };
 
     presentation.slides.forEach((slide) => {
       const pSlide = pptx.addSlide();
@@ -627,33 +692,44 @@
         if (el.type === "text") {
           const rawText = (el.text || "").replace(/<br\s*[\/]?>/gi, "\n").replace(/<[^>]*>/g, "");
           const ptSize = Math.round((parseInt(el.fontSize, 10) || 24) * 0.75);
-          const colorHex = (el.color || "#ffffff").replace("#", "");
+          const color = pptColor(el.color, "FFFFFF");
           pSlide.addText(rawText, {
             x: xInch,
             y: yInch,
             w: wInch,
             h: hInch,
             fontSize: ptSize,
-            color: colorHex,
-            bold: el.fontWeight === "bold"
+            color: color.color,
+            transparency: color.transparency,
+            bold: el.fontWeight === "bold",
+            rotate: Number(el.rotation) || 0,
+            breakLine: false,
+            valign: "mid",
+            margin: 0
           });
         } else if (el.type === "rect") {
-          const fillHex = (el.fill || "#333333").replace("#", "");
+          const fill = pptColor(el.fill);
+          const line = pptColor(el.borderColor, fill.color);
           pSlide.addShape(pptx.ShapeType.rect, {
             x: xInch,
             y: yInch,
             w: wInch,
             h: hInch,
-            fill: { color: fillHex.length === 6 ? fillHex : "333333" }
+            rotate: Number(el.rotation) || 0,
+            fill,
+            line: { color: line.color, transparency: line.transparency, width: 1 }
           });
         } else if (el.type === "circle") {
-          const fillHex = (el.fill || "#333333").replace("#", "");
+          const fill = pptColor(el.fill);
+          const line = pptColor(el.borderColor, fill.color);
           pSlide.addShape(pptx.ShapeType.oval, {
             x: xInch,
             y: yInch,
             w: wInch,
             h: hInch,
-            fill: { color: fillHex.length === 6 ? fillHex : "333333" }
+            rotate: Number(el.rotation) || 0,
+            fill,
+            line: { color: line.color, transparency: line.transparency, width: 1 }
           });
         } else if (el.type === "image" && el.src) {
           pSlide.addImage({
@@ -661,7 +737,8 @@
             x: xInch,
             y: yInch,
             w: wInch,
-            h: hInch
+            h: hInch,
+            rotate: Number(el.rotation) || 0
           });
         }
       });

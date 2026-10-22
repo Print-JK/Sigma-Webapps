@@ -105,6 +105,7 @@ body {
   color: #34d399;
   font-weight: 600;
 }
+.tool-btn img { width:16px; height:16px; filter:invert(1); flex:none; }
 
 .toolbar-separator {
   width: 1px;
@@ -177,6 +178,8 @@ body {
   border-color: #10b981;
   background: rgba(16, 185, 129, 0.08);
 }
+
+.thumbnail-card.drop-target { outline: 2px dashed #10b981; outline-offset: 2px; }
 .thumbnail-canvas {
   width: 100%;
   max-width: 170px;

@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="../assets/modern-theme.css" />
   <link rel="stylesheet" href="style.css" />
   <!-- Offline PPTX Engine -->
+  <script src="../lib/jszip.min.js"></script>
   <script src="../lib/pptxgen.min.js"></script>
 </head>
 <body>
@@ -76,9 +77,17 @@
       <button id="btnBringForward" class="ribbon-btn" title="Bring Forward">▲ Forward</button>
       <button id="btnSendBackward" class="ribbon-btn" title="Send Backward">▼ Backward</button>
       <button id="btnDeleteElement" class="ribbon-btn" style="color: #ef4444;" title="Delete Selected Element (Del)">✕</button>
+      <label class="ribbon-btn" title="Rotate selected object">↻ <input id="elementRotation" type="range" min="-180" max="180" value="0" style="width:72px; vertical-align:middle"><output id="elementRotationValue">0°</output></label>
     </div>
 
     <!-- Slide Canvas Background -->
+    <div class="ribbon-group">
+      <select id="slideLayoutSelect" class="ribbon-select" title="Slide layout">
+        <option value="title">Title Slide</option><option value="content">Title &amp; Content</option>
+        <option value="columns">Two Columns</option><option value="blank">Blank</option>
+      </select>
+      <button id="btnApplyLayout" class="ribbon-btn">Apply Layout</button>
+    </div>
     <div class="ribbon-group">
       <span style="font-size: 0.75rem; color: var(--text-muted); margin-right: 4px;">Theme:</span>
       <select id="slideThemeSelect" class="ribbon-select" title="Slide Theme">

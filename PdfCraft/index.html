@@ -23,6 +23,7 @@
     <div class="craft-menu-bar">
       <button class="menu-btn" id="openFileBtn">📂 Open PDF</button>
       <button class="menu-btn" id="mergeFileBtn">🧩 Merge Another PDF</button>
+      <button class="menu-btn" id="extractPageBtn">↗ Extract Current Page</button>
       <button class="menu-btn" id="savePdfBtn" style="color: #34d399; font-weight: 600;">💾 Export PDF</button>
       <input type="file" id="fileInput" accept=".pdf" style="display:none;" />
       <input type="file" id="mergeInput" accept=".pdf" style="display:none;" />
@@ -41,11 +42,11 @@
     <div class="toolbar-group">
       <button class="tool-btn" id="toggleSidebarBtn" title="Toggle Thumbnails Panel">📑 Thumbnails</button>
       <div class="toolbar-separator"></div>
-      <button class="tool-btn active" id="tool_select" title="Selection / Pan Tool">🖐️ Select</button>
-      <button class="tool-btn" id="tool_highlight" title="Highlight Tool">🖍️ Highlight</button>
-      <button class="tool-btn" id="tool_pen" title="Freehand Pen Tool">✏️ Pen</button>
-      <button class="tool-btn" id="tool_rect" title="Rectangle Shape">⬜ Box</button>
-      <button class="tool-btn" id="tool_text" title="Text Note">🔤 Text</button>
+      <button class="tool-btn active" id="tool_select" title="Selection / Pan Tool"><img src="icons/square-dashed-mouse-pointer.svg" alt=""> Select</button>
+      <button class="tool-btn" id="tool_highlight" title="Highlight Tool"><img src="icons/highlighter.svg" alt=""> Highlight</button>
+      <button class="tool-btn" id="tool_pen" title="Freehand Pen Tool"><img src="icons/pen-tool.svg" alt=""> Pen</button>
+      <button class="tool-btn" id="tool_rect" title="Rectangle Shape"><img src="icons/square.svg" alt=""> Box</button>
+      <button class="tool-btn" id="tool_text" title="Text Note"><img src="icons/text-cursor-input.svg" alt=""> Text</button>
     </div>
 
     <div class="toolbar-group">
@@ -89,9 +90,9 @@
 
       <!-- Floating Bottom Navigation Bar -->
       <div class="viewport-bottom-bar" id="bottomBar">
-        <button class="tool-btn" id="prevPageBtn" title="Previous Page">◀</button>
+      <button class="tool-btn" id="prevPageBtn" title="Previous Page"><img src="icons/chevron-left.svg" alt="Previous"></button>
         <span class="page-indicator" id="pageIndicator">Page 1 of 1</span>
-        <button class="tool-btn" id="nextPageBtn" title="Next Page">▶</button>
+      <button class="tool-btn" id="nextPageBtn" title="Next Page"><img src="icons/chevron-right.svg" alt="Next"></button>
       </div>
     </main>
   </div>

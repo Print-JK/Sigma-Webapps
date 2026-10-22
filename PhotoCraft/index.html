@@ -48,6 +48,14 @@
       <span>Opacity:</span>
       <input type="number" id="brushOpacityInput" value="1.0" min="0.1" max="1.0" step="0.1" style="width: 55px;" />
     </div>
+    <div class="option-item">
+      <span>Gradient:</span>
+      <input type="color" id="gradientEndColorInput" value="#3b82f6" title="Gradient end color" />
+      <select id="gradientTypeSelect" title="Gradient shape">
+        <option value="linear">Linear</option>
+        <option value="radial">Radial</option>
+      </select>
+    </div>
     <div style="width: 1px; height: 18px; background: rgba(255,255,255,0.1);"></div>
     <div class="option-item">
       <span>Layer Opacity:</span>
@@ -71,13 +79,16 @@
   <div class="studio-layout">
     <!-- Left Tools Palette -->
     <aside class="tools-palette">
-      <button class="tool-icon-btn active" id="tool_brush" title="Paintbrush Tool (B)">🖌️</button>
-      <button class="tool-icon-btn" id="tool_eraser" title="Eraser Tool (E)">🧹</button>
-      <button class="tool-icon-btn" id="tool_bucket" title="Paint Bucket / Flood Fill (G)">🪣</button>
-      <button class="tool-icon-btn" id="tool_rect" title="Rectangle Tool (U)">⬜</button>
-      <button class="tool-icon-btn" id="tool_circle" title="Ellipse Tool">⚪</button>
-      <button class="tool-icon-btn" id="tool_text" title="Type / Text Tool (T)">🔤</button>
-      <button class="tool-icon-btn" id="tool_eyedropper" title="Color Eyedropper (I)">💧</button>
+      <button class="tool-icon-btn" id="tool_rectMarquee" title="Rectangular Marquee (M)"><img src="icons/square-dashed.svg" alt="Rectangular selection"></button>
+      <button class="tool-icon-btn" id="tool_ellipseMarquee" title="Elliptical Marquee (Shift+M)"><img src="icons/circle-dashed.svg" alt="Elliptical selection"></button>
+      <button class="tool-icon-btn active" id="tool_brush" title="Paintbrush Tool (B)"><img src="icons/brush.svg" alt="Brush"></button>
+      <button class="tool-icon-btn" id="tool_eraser" title="Eraser Tool (E)"><img src="icons/eraser.svg" alt="Eraser"></button>
+      <button class="tool-icon-btn" id="tool_bucket" title="Paint Bucket / Flood Fill (G)"><img src="icons/paint-bucket.svg" alt="Bucket"></button>
+      <button class="tool-icon-btn" id="tool_gradient" title="Gradient Tool (G)"><img src="icons/gradient.svg" alt="Gradient"></button>
+      <button class="tool-icon-btn" id="tool_rect" title="Rectangle Tool (U)"><img src="icons/square.svg" alt="Rectangle"></button>
+      <button class="tool-icon-btn" id="tool_circle" title="Ellipse Tool"><img src="icons/circle.svg" alt="Ellipse"></button>
+      <button class="tool-icon-btn" id="tool_text" title="Type / Text Tool (T)"><img src="icons/type.svg" alt="Text"></button>
+      <button class="tool-icon-btn" id="tool_eyedropper" title="Color Eyedropper (I)"><img src="icons/eye.svg" alt="Eyedropper"></button>
     </aside>
 
     <!-- Central Canvas Stage -->
@@ -102,6 +113,8 @@
         <div class="layer-actions-bar">
           <button class="thumb-btn" id="moveUpBtn" title="Move Layer Up">▲ Up</button>
           <button class="thumb-btn" id="moveDownBtn" title="Move Layer Down">▼ Down</button>
+          <button class="thumb-btn" id="duplicateLayerBtn" title="Duplicate selected layer">⧉ Duplicate</button>
+          <button class="thumb-btn" id="mergeLayerBtn" title="Merge selected layer down">Merge Down</button>
         </div>
       </div>
 
@@ -116,6 +129,10 @@
           <button class="filter-btn" id="filter_grayscale">⬛ Grayscale</button>
           <button class="filter-btn" id="filter_sepia">📜 Sepia</button>
           <button class="filter-btn" id="filter_invert" style="grid-column: 1 / -1;">🔄 Invert Colors</button>
+          <button class="filter-btn" id="filter_levels">Levels Auto</button>
+          <label class="adjust-slider">Hue <input id="hueShift" type="range" min="-180" max="180" value="0"></label>
+          <label class="adjust-slider">Saturation <input id="saturationShift" type="range" min="-100" max="100" value="20"></label>
+          <button class="filter-btn" id="applyHslBtn" style="grid-column: 1 / -1;">Apply Hue / Saturation</button>
         </div>
       </div>
     </aside>

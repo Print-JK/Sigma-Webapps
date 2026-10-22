@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="../assets/modern-theme.css" />
   <link rel="stylesheet" href="style.css" />
   <!-- Offline Excel Engine -->
+  <script src="../lib/jszip.min.js"></script>
   <script src="../lib/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -75,6 +76,12 @@
       <button id="btnClearCell" class="ribbon-btn" style="color: #ef4444;" title="Clear Cell (Del)">⌫</button>
     </div>
 
+    <div class="ribbon-group">
+      <button id="btnMergeCells" class="ribbon-btn wide-ribbon-btn" title="Merge selected cells; keeps the upper-left value">Merge</button>
+      <button id="btnUnmergeCells" class="ribbon-btn wide-ribbon-btn" title="Unmerge selected cells">Unmerge</button>
+      <button id="btnConditionalFormat" class="ribbon-btn wide-ribbon-btn" title="Add a conditional formatting rule to selected cells">Conditional</button>
+    </div>
+
     <!-- Quick Formulas -->
     <div class="ribbon-group">
       <select id="quickFormulaSelect" class="ribbon-select" title="Insert Formula">
@@ -109,6 +116,7 @@
       <!-- Populated dynamically -->
     </div>
     <button id="btnAddSheet" class="add-sheet-btn" title="Add Sheet">+</button>
+    <button id="btnDuplicateSheet" class="add-sheet-btn" title="Duplicate current sheet">⧉</button>
 
     <div style="flex: 1;"></div>
 

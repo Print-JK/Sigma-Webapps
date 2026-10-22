@@ -22,10 +22,10 @@
     animFrameId: null,
     selectedClipId: null,
     tracks: [
-      { name: "Track 1", vol: 1, pan: 0, mute: false, solo: false },
-      { name: "Track 2", vol: 1, pan: 0, mute: false, solo: false },
-      { name: "Track 3", vol: 1, pan: 0, mute: false, solo: false },
-      { name: "Track 4 (Vocals)", vol: 1, pan: 0, mute: false, solo: false }
+      { name: "Track 1", vol: 1, pan: 0, mute: false, solo: false, recordArm: false },
+      { name: "Track 2", vol: 1, pan: 0, mute: false, solo: false, recordArm: false },
+      { name: "Track 3", vol: 1, pan: 0, mute: false, solo: false, recordArm: false },
+      { name: "Track 4 (Vocals)", vol: 1, pan: 0, mute: false, solo: false, recordArm: true }
     ],
     clips: [], // { id, trackIdx, name, buffer, startTime, duration, offset }
     activeSources: []
@@ -35,6 +35,8 @@
   let mediaRecorder = null;
   let recordedChunks = [];
   let recordStartTime = 0;
+let recordingStream = null;
+let recordingTrackIdx = 3;
 
   // DOM Elements
   const projectTitleInput = document.getElementById("projectTitle");
@@ -57,6 +59,9 @@
   const reverbTime = document.getElementById("reverbTime");
   const reverbWet = document.getElementById("reverbWet");
   const masterVolume = document.getElementById("masterVolume");
+  const limiterEnabled = document.getElementById("limiterEnabled");
+  const limiterCeiling = document.getElementById("limiterCeiling");
+  const limiterCeilingLabel = document.getElementById("limiterCeilingLabel");
 
   // Audio Context & Graph Setup
   let masterGain = null;
@@ -66,7 +71,28 @@
   let delayNode = null;
   let delayGain = null;
   let analyserNode = null;
+  let masterCompressor = null;
+  let masterLimiter = null;
   let trackNodes = [];
+
+  function createLimiterCurve(ceilingDb) {
+    const ceiling = Math.pow(10, ceilingDb / 20);
+    const kneeStart = ceiling * 0.82;
+    const curve = new Float32Array(65537);
+    for (let i = 0; i < curve.length; i++) {
+      const input = i * 2 / (curve.length - 1) - 1;
+      const magnitude = Math.abs(input);
+      const limited = magnitude <= kneeStart ? magnitude : kneeStart + (ceiling - kneeStart) * (1 - Math.exp(-(magnitude - kneeStart) / (ceiling - kneeStart)));
+      curve[i] = Math.sign(input) * Math.min(ceiling, limited);
+    }
+    return curve;
+  }
+
+  function configureLimiter(node) {
+    if (!node) return;
+    node.curve = limiterEnabled.checked ? createLimiterCurve(parseFloat(limiterCeiling.value)) : null;
+    limiterCeilingLabel.textContent = `${parseFloat(limiterCeiling.value).toFixed(1)} dBFS`;
+  }
 
   function initAudioContext() {
     if (state.audioCtx) return;
@@ -104,18 +130,31 @@
     analyserNode = state.audioCtx.createAnalyser();
     analyserNode.fftSize = 256;
 
+    masterCompressor = state.audioCtx.createDynamicsCompressor();
+    masterCompressor.threshold.value = -6;
+    masterCompressor.knee.value = 8;
+    masterCompressor.ratio.value = 12;
+    masterCompressor.attack.value = 0.003;
+    masterCompressor.release.value = 0.18;
+
+    masterLimiter = state.audioCtx.createWaveShaper();
+    masterLimiter.oversample = "4x";
+    configureLimiter(masterLimiter);
+
     // Connect Master Graph
     eqLowNode.connect(eqMidNode);
     eqMidNode.connect(eqHighNode);
-    eqHighNode.connect(masterGain);
+    eqHighNode.connect(masterCompressor);
 
     // Reverb parallel loop
     eqHighNode.connect(delayNode);
     delayNode.connect(delayGain);
-    delayGain.connect(masterGain);
+    delayGain.connect(masterCompressor);
     delayGain.connect(delayNode); // feedback
 
-    masterGain.connect(analyserNode);
+    masterCompressor.connect(masterGain);
+    masterGain.connect(masterLimiter);
+    masterLimiter.connect(analyserNode);
     analyserNode.connect(state.audioCtx.destination);
 
     // Track Mixer Nodes
@@ -160,6 +199,8 @@
   masterVolume.addEventListener("input", (e) => {
     if (masterGain) masterGain.gain.value = parseFloat(e.target.value);
   });
+  limiterEnabled.addEventListener("change", () => configureLimiter(masterLimiter));
+  limiterCeiling.addEventListener("input", () => configureLimiter(masterLimiter));
 
   // Track Mixer Controls (Vol, Pan, Mute, Solo)
   document.querySelectorAll(".track-vol").forEach((input) => {
@@ -195,6 +236,18 @@
       state.tracks[idx].solo = !state.tracks[idx].solo;
       btn.classList.toggle("active", state.tracks[idx].solo);
       applyTrackGains();
+    });
+  });
+
+  document.querySelectorAll(".track-toggle-btn.record-arm").forEach((btn) => {
+    btn.classList.toggle("active", state.tracks[Number(btn.dataset.track)].recordArm);
+    btn.addEventListener("click", (e) => {
+      const idx = Number(e.currentTarget.dataset.track);
+      const next = !state.tracks[idx].recordArm;
+      state.tracks.forEach((track, trackIdx) => {
+        track.recordArm = next && trackIdx === idx;
+        document.querySelector(`.track-toggle-btn.record-arm[data-track="${trackIdx}"]`)?.classList.toggle("active", track.recordArm);
+      });
     });
   });
 
@@ -323,8 +376,37 @@
       waveCanvas.className = "clip-waveform";
       waveCanvas.width = Math.max(100, Math.round(clip.duration * PX_PER_SEC));
       waveCanvas.height = 68;
-      drawWaveform(waveCanvas, clip.buffer);
+      drawWaveform(waveCanvas, clip.buffer, clip.offset, clip.duration);
       clipEl.appendChild(waveCanvas);
+
+      ["left", "right"].forEach((side) => {
+        const handle = document.createElement("div");
+        handle.className = `clip-trim-handle ${side}`;
+        handle.title = `Trim ${side} edge`;
+        handle.addEventListener("mousedown", (event) => {
+          event.preventDefault(); event.stopPropagation();
+          state.selectedClipId = clip.id;
+          const startX = event.clientX, original = { startTime: clip.startTime, offset: clip.offset, duration: clip.duration };
+          const move = (moveEvent) => {
+            const delta = (moveEvent.clientX - startX) / PX_PER_SEC;
+            if (side === "left") {
+              const shift = Math.max(-original.offset, Math.min(original.duration - 0.1, delta));
+              clip.startTime = original.startTime + shift;
+              clip.offset = original.offset + shift;
+              clip.duration = original.duration - shift;
+            } else {
+              clip.duration = Math.max(0.1, Math.min(clip.buffer.duration - clip.offset, original.duration + delta));
+            }
+            clipEl.style.left = `${clip.startTime * PX_PER_SEC}px`;
+            clipEl.style.width = `${clip.duration * PX_PER_SEC}px`;
+            waveCanvas.width = Math.max(100, Math.round(clip.duration * PX_PER_SEC));
+            drawWaveform(waveCanvas, clip.buffer, clip.offset, clip.duration);
+          };
+          const up = () => { window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", up); };
+          window.addEventListener("mousemove", move); window.addEventListener("mouseup", up);
+        });
+        clipEl.appendChild(handle);
+      });
 
       // Dragging Interaction
       let isDragging = false;
@@ -364,12 +446,15 @@
   }
 
   // Draw Audio Waveform onto Canvas
-  function drawWaveform(canvas, audioBuffer) {
+  function drawWaveform(canvas, audioBuffer, offset = 0, duration = audioBuffer.duration) {
     const ctx = canvas.getContext("2d");
     const width = canvas.width;
     const height = canvas.height;
-    const data = audioBuffer.getChannelData(0);
-    const step = Math.ceil(data.length / width);
+    const fullData = audioBuffer.getChannelData(0);
+    const start = Math.max(0, Math.min(fullData.length, Math.floor(offset * audioBuffer.sampleRate)));
+    const end = Math.max(start, Math.min(fullData.length, Math.floor((offset + duration) * audioBuffer.sampleRate)));
+    const data = fullData.subarray(start, end);
+    const step = Math.max(1, Math.ceil(data.length / width));
     const amp = height / 2;
 
     ctx.clearRect(0, 0, width, height);
@@ -423,7 +508,8 @@
           when = now + (clip.startTime - state.currentTime);
         }
 
-        source.start(when, offset);
+        const remaining = Math.max(0.001, clip.duration - (state.currentTime >= clip.startTime ? state.currentTime - clip.startTime : 0));
+        source.start(when, offset, remaining);
         state.activeSources.push(source);
       }
     });
@@ -539,6 +625,8 @@
     if (!state.isRecording) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        recordingStream = stream;
+        recordingTrackIdx = Math.max(0, state.tracks.findIndex((track) => track.recordArm));
         mediaRecorder = new MediaRecorder(stream);
         recordedChunks = [];
         recordStartTime = state.currentTime;
@@ -554,7 +642,7 @@
 
           const newClip = {
             id: `rec_${Date.now()}`,
-            trackIdx: 3, // Vocals track
+            trackIdx: recordingTrackIdx,
             name: `Take ${state.clips.length + 1}`,
             buffer: audioBuffer,
             startTime: recordStartTime,
@@ -565,6 +653,8 @@
           state.clips.push(newClip);
           state.selectedClipId = newClip.id;
           renderClips();
+          recordingStream?.getTracks().forEach((track) => track.stop());
+          recordingStream = null;
         };
 
         mediaRecorder.start();
@@ -576,6 +666,8 @@
       }
     } else {
       mediaRecorder.stop();
+      recordingStream?.getTracks().forEach((track) => track.stop());
+      recordingStream = null;
       state.isRecording = false;
       btnRecord.classList.remove("active");
       if (state.isPlaying) stopPlayback();
@@ -619,7 +711,7 @@
     draw();
   }
 
-  // Master Audio Mixdown Export (.wav 16-bit PCM)
+  // Master Audio Mixdown Export (.wav 16-bit PCM) through the live master FX chain.
   document.getElementById("btnExportWav").addEventListener("click", async () => {
     if (state.clips.length === 0) {
       alert("No audio clips to export.");
@@ -636,36 +728,81 @@
       if (end > maxDuration) maxDuration = end;
     });
 
-    const sampleRate = 44100;
-    const numChannels = 2;
-    const offlineCtx = new OfflineAudioContext(numChannels, Math.ceil(sampleRate * maxDuration), sampleRate);
-
-    // Replicate track graph in OfflineAudioContext
-    state.clips.forEach((clip) => {
-      const t = state.tracks[clip.trackIdx];
-      if (t.mute) return;
-
-      const src = offlineCtx.createBufferSource();
-      src.buffer = clip.buffer;
-
-      const gain = offlineCtx.createGain();
-      gain.gain.value = t.vol;
-
-      if (offlineCtx.createStereoPanner) {
-        const panner = offlineCtx.createStereoPanner();
-        panner.pan.value = t.pan;
-        src.connect(gain);
-        gain.connect(panner);
-        panner.connect(offlineCtx.destination);
-      } else {
-        src.connect(gain);
-        gain.connect(offlineCtx.destination);
-      }
-
-      src.start(clip.startTime, clip.offset, clip.duration);
-    });
-
     try {
+      const sampleRate = 44100;
+      const numChannels = 2;
+      const OfflineContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+      if (!OfflineContext) throw new Error("Offline audio rendering is not supported by this browser.");
+      const tailSeconds = parseFloat(reverbWet.value) > 0 ? parseFloat(reverbTime.value) * 5 : 0;
+      const offlineCtx = new OfflineContext(numChannels, Math.ceil(sampleRate * (maxDuration + tailSeconds)), sampleRate);
+
+      // Match the live master path: 3-band EQ, parallel feedback delay,
+      // compressor, master gain and output limiter after per-track routing.
+      const low = offlineCtx.createBiquadFilter();
+      low.type = "lowshelf";
+      low.frequency.value = 100;
+      low.gain.value = parseFloat(eqLow.value);
+
+      const mid = offlineCtx.createBiquadFilter();
+      mid.type = "peaking";
+      mid.frequency.value = 1000;
+      mid.Q.value = 1;
+      mid.gain.value = parseFloat(eqMid.value);
+
+      const high = offlineCtx.createBiquadFilter();
+      high.type = "highshelf";
+      high.frequency.value = 8000;
+      high.gain.value = parseFloat(eqHigh.value);
+
+      const delay = offlineCtx.createDelay();
+      delay.delayTime.value = parseFloat(reverbTime.value);
+      const wet = offlineCtx.createGain();
+      wet.gain.value = parseFloat(reverbWet.value);
+
+      const compressor = offlineCtx.createDynamicsCompressor();
+      compressor.threshold.value = -6;
+      compressor.knee.value = 8;
+      compressor.ratio.value = 12;
+      compressor.attack.value = 0.003;
+      compressor.release.value = 0.18;
+
+      const master = offlineCtx.createGain();
+      master.gain.value = parseFloat(masterVolume.value);
+      const limiter = offlineCtx.createWaveShaper();
+      limiter.oversample = "4x";
+      configureLimiter(limiter);
+      low.connect(mid);
+      mid.connect(high);
+      high.connect(compressor);
+      high.connect(delay);
+      delay.connect(wet);
+      wet.connect(compressor);
+      wet.connect(delay);
+      compressor.connect(master);
+      master.connect(limiter);
+      limiter.connect(offlineCtx.destination);
+
+      const hasSolo = state.tracks.some((track) => track.solo);
+      state.clips.forEach((clip) => {
+        const track = state.tracks[clip.trackIdx];
+        if (!track || track.mute || (hasSolo && !track.solo)) return;
+
+        const source = offlineCtx.createBufferSource();
+        source.buffer = clip.buffer;
+        const gain = offlineCtx.createGain();
+        gain.gain.value = track.vol;
+        source.connect(gain);
+        if (offlineCtx.createStereoPanner) {
+          const panner = offlineCtx.createStereoPanner();
+          panner.pan.value = track.pan;
+          gain.connect(panner);
+          panner.connect(low);
+        } else {
+          gain.connect(low);
+        }
+        source.start(clip.startTime, clip.offset, clip.duration);
+      });
+
       const renderedBuffer = await offlineCtx.startRendering();
       const wavBlob = audioBufferToWavBlob(renderedBuffer);
 

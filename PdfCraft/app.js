@@ -31,7 +31,8 @@
     penWidth: 3,
     pagesData: [],        // array of { pageIndex, rotation, annotations: [] }
     isDrawing: false,
-    currentPath: []
+    currentPath: [],
+    currentViewport: null
   };
 
   // DOM Elements
@@ -85,6 +86,7 @@
     const rotation = (page.rotate + pageMeta.rotation) % 360;
 
     const viewport = page.getViewport({ scale: state.zoom, rotation });
+    state.currentViewport = viewport;
     pdfCanvas.width = viewport.width;
     pdfCanvas.height = viewport.height;
     annotationCanvas.width = viewport.width;
@@ -107,30 +109,39 @@
     const pageMeta = state.pagesData[state.currentPage - 1];
     if (!pageMeta) return;
 
+    const viewport = state.currentViewport;
+    if (!viewport) return;
+    const toCanvas = (x, y) => viewport.convertToViewportPoint(x, y);
     pageMeta.annotations.forEach(ann => {
       ctx.save();
       if (ann.type === "pen") {
         ctx.strokeStyle = ann.color;
-        ctx.lineWidth = ann.width;
+        ctx.lineWidth = ann.width * state.zoom;
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
         ctx.beginPath();
         ann.points.forEach((pt, i) => {
-          if (i === 0) ctx.moveTo(pt.x, pt.y);
-          else ctx.lineTo(pt.x, pt.y);
+          const [x, y] = toCanvas(pt.x, pt.y);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
         });
         ctx.stroke();
       } else if (ann.type === "highlight") {
         ctx.fillStyle = hexToRgba(ann.color, 0.35);
-        ctx.fillRect(ann.x, ann.y, ann.width, ann.height);
+        const [x1, y1] = toCanvas(ann.x1, ann.y1);
+        const [x2, y2] = toCanvas(ann.x2, ann.y2);
+        ctx.fillRect(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x2 - x1), Math.abs(y2 - y1));
       } else if (ann.type === "rect") {
         ctx.strokeStyle = ann.color;
-        ctx.lineWidth = ann.width || 2;
-        ctx.strokeRect(ann.x, ann.y, ann.widthRect, ann.heightRect);
+        ctx.lineWidth = (ann.width || 2) * state.zoom;
+        const [x1, y1] = toCanvas(ann.x1, ann.y1);
+        const [x2, y2] = toCanvas(ann.x2, ann.y2);
+        ctx.strokeRect(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x2 - x1), Math.abs(y2 - y1));
       } else if (ann.type === "text") {
-        ctx.font = `${ann.size || 16}px sans-serif`;
+        const [x, y] = toCanvas(ann.x, ann.y);
+        ctx.font = `${(ann.size || 16) * state.zoom}px sans-serif`;
         ctx.fillStyle = ann.color;
-        ctx.fillText(ann.text, ann.x, ann.y);
+        ctx.fillText(ann.text, x, y);
       }
       ctx.restore();
     });
@@ -151,6 +162,17 @@
       const card = document.createElement("div");
       card.className = `thumbnail-card ${pageIndex === state.currentPage ? "active" : ""}`;
       card.id = `thumbCard_${pageIndex}`;
+      card.draggable = true;
+      card.addEventListener("dragstart", (event) => event.dataTransfer.setData("text/plain", String(pageIndex - 1)));
+      card.addEventListener("dragover", (event) => { event.preventDefault(); card.classList.add("drop-target"); });
+      card.addEventListener("dragleave", () => card.classList.remove("drop-target"));
+      card.addEventListener("drop", async (event) => {
+        event.preventDefault();
+        card.classList.remove("drop-target");
+        const from = Number(event.dataTransfer.getData("text/plain"));
+        const to = pageIndex - 1;
+        if (Number.isInteger(from) && from !== to) await reorderPage(from, to);
+      });
 
       const tCanvas = document.createElement("canvas");
       tCanvas.className = "thumbnail-canvas";
@@ -195,6 +217,30 @@
 
   function updatePageIndicator() {
     pageIndicator.innerText = `Page ${state.currentPage} of ${state.numPages}`;
+  }
+
+  async function reorderPage(from, to) {
+    if (from < 0 || to < 0 || from >= state.numPages || to >= state.numPages) return;
+    const oldCurrent = state.currentPage - 1;
+    const order = [...Array(state.numPages).keys()];
+    const [pageIndex] = order.splice(from, 1);
+    order.splice(to, 0, pageIndex);
+    const nextMeta = [...state.pagesData];
+    const [meta] = nextMeta.splice(from, 1);
+    nextMeta.splice(to, 0, meta);
+    const newDoc = await PDFDocument.create();
+    (await newDoc.copyPages(state.pdfLibDoc, order)).forEach((page) => newDoc.addPage(page));
+    state.pdfLibDoc = newDoc;
+    state.pagesData = nextMeta;
+    const bytes = await newDoc.save();
+    state.pdfDoc = await pdfjsLib.getDocument({ data: bytes }).promise;
+    let current = oldCurrent;
+    if (oldCurrent === from) current = to;
+    else if (from < to && oldCurrent > from && oldCurrent <= to) current = oldCurrent - 1;
+    else if (from > to && oldCurrent < from && oldCurrent >= to) current = oldCurrent + 1;
+    state.currentPage = current + 1;
+    await renderCurrentPage();
+    await renderThumbnails();
   }
 
   async function movePageUp(pageNumber) {
@@ -298,6 +344,7 @@
 
   // Annotation Drawing Events on AnnotationCanvas
   let startX = 0, startY = 0;
+  const toPdfPoint = (x, y) => state.currentViewport.convertToPdfPoint(x, y);
 
   annotationCanvas.addEventListener("mousedown", (e) => {
     if (state.activeTool === "select") return;
@@ -307,17 +354,17 @@
     state.isDrawing = true;
 
     if (state.activeTool === "pen") {
-      state.currentPath = [{ x: startX, y: startY }];
+      const [x, y] = toPdfPoint(startX, startY);
+      state.currentPath = [{ x, y }];
     } else if (state.activeTool === "text") {
       const textVal = prompt("Enter text annotation:", "Note");
       if (textVal) {
         state.pagesData[state.currentPage - 1].annotations.push({
           type: "text",
-          x: startX,
-          y: startY,
+          ...(() => { const [x, y] = toPdfPoint(startX, startY); return { x, y }; })(),
           text: textVal,
           color: state.penColor,
-          size: 16
+          size: 16 / state.zoom
         });
         redrawAnnotations();
       }
@@ -332,14 +379,16 @@
     const curY = e.clientY - rect.top;
 
     if (state.activeTool === "pen") {
-      state.currentPath.push({ x: curX, y: curY });
+      const [x, y] = toPdfPoint(curX, curY);
+      state.currentPath.push({ x, y });
       const ctx = annotationCanvas.getContext("2d");
       ctx.strokeStyle = state.penColor;
       ctx.lineWidth = state.penWidth;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       ctx.beginPath();
-      ctx.moveTo(state.currentPath[state.currentPath.length - 2].x, state.currentPath[state.currentPath.length - 2].y);
+      const [prevX, prevY] = state.currentViewport.convertToViewportPoint(state.currentPath[state.currentPath.length - 2].x, state.currentPath[state.currentPath.length - 2].y);
+      ctx.moveTo(prevX, prevY);
       ctx.lineTo(curX, curY);
       ctx.stroke();
     } else if (state.activeTool === "highlight" || state.activeTool === "rect") {
@@ -372,27 +421,25 @@
         type: "pen",
         points: [...state.currentPath],
         color: state.penColor,
-        width: state.penWidth
+        width: state.penWidth / state.zoom
       });
       state.currentPath = [];
     } else if (state.activeTool === "highlight") {
+      const [x1, y1] = toPdfPoint(startX, startY);
+      const [x2, y2] = toPdfPoint(curX, curY);
       pageMeta.annotations.push({
         type: "highlight",
-        x: Math.min(startX, curX),
-        y: Math.min(startY, curY),
-        width: Math.abs(curX - startX),
-        height: Math.abs(curY - startY),
+        x1, y1, x2, y2,
         color: state.highlightColor
       });
     } else if (state.activeTool === "rect") {
+      const [x1, y1] = toPdfPoint(startX, startY);
+      const [x2, y2] = toPdfPoint(curX, curY);
       pageMeta.annotations.push({
         type: "rect",
-        x: Math.min(startX, curX),
-        y: Math.min(startY, curY),
-        widthRect: Math.abs(curX - startX),
-        heightRect: Math.abs(curY - startY),
+        x1, y1, x2, y2,
         color: state.penColor,
-        width: 2
+        width: 2 / state.zoom
       });
     }
 
@@ -402,9 +449,12 @@
   // Export & Download PDF
   async function exportPdf() {
     if (!state.pdfLibDoc) return;
+    // Work on a fresh copy so repeated exports do not accumulate rotations or
+    // bake the same in-memory annotation overlay into the source document.
+    const outputDoc = await PDFDocument.load(await state.pdfLibDoc.save());
 
     // Apply rotations
-    const pages = state.pdfLibDoc.getPages();
+    const pages = outputDoc.getPages();
     pages.forEach((page, idx) => {
       const meta = state.pagesData[idx];
       if (meta && meta.rotation !== 0) {
@@ -413,47 +463,15 @@
       }
     });
 
-    const font = await state.pdfLibDoc.embedFont(StandardFonts.Helvetica);
+    const font = await outputDoc.embedFont(StandardFonts.Helvetica);
 
     // Bake annotations
     pages.forEach((page, idx) => {
       const meta = state.pagesData[idx];
-      if (!meta || !meta.annotations.length) return;
-      const { height } = page.getSize();
-      const scaleFactor = page.getWidth() / pdfCanvas.width;
-
-      meta.annotations.forEach(ann => {
-        if (ann.type === "highlight") {
-          page.drawRectangle({
-            x: ann.x * scaleFactor,
-            y: height - (ann.y + ann.height) * scaleFactor,
-            width: ann.width * scaleFactor,
-            height: ann.height * scaleFactor,
-            color: rgb(0.98, 0.8, 0.1),
-            opacity: 0.35
-          });
-        } else if (ann.type === "rect") {
-          page.drawRectangle({
-            x: ann.x * scaleFactor,
-            y: height - (ann.y + ann.heightRect) * scaleFactor,
-            width: ann.widthRect * scaleFactor,
-            height: ann.heightRect * scaleFactor,
-            borderColor: rgb(0.9, 0.2, 0.2),
-            borderWidth: 2
-          });
-        } else if (ann.type === "text") {
-          page.drawText(ann.text, {
-            x: ann.x * scaleFactor,
-            y: height - ann.y * scaleFactor,
-            size: (ann.size || 16) * scaleFactor,
-            font,
-            color: rgb(0.1, 0.1, 0.1)
-          });
-        }
-      });
+      if (meta) drawAnnotations(page, meta.annotations, font);
     });
 
-    const outBytes = await state.pdfLibDoc.save();
+    const outBytes = await outputDoc.save();
     const blob = new Blob([outBytes], { type: "application/pdf" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -462,6 +480,50 @@
     document.body.appendChild(a);
     a.click();
     a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+
+  function colorToRgb(hex) {
+    const value = String(hex || "#000000").replace("#", "");
+    return rgb(parseInt(value.slice(0, 2), 16) / 255, parseInt(value.slice(2, 4), 16) / 255, parseInt(value.slice(4, 6), 16) / 255);
+  }
+
+  function drawAnnotations(page, annotations, font) {
+    annotations.forEach(ann => {
+      if (ann.type === "highlight" || ann.type === "rect") {
+        const options = {
+          x: Math.min(ann.x1, ann.x2), y: Math.min(ann.y1, ann.y2),
+          width: Math.abs(ann.x2 - ann.x1), height: Math.abs(ann.y2 - ann.y1)
+        };
+        if (ann.type === "highlight") page.drawRectangle({ ...options, color: colorToRgb(ann.color), opacity: 0.35 });
+        else page.drawRectangle({ ...options, borderColor: colorToRgb(ann.color), borderWidth: ann.width || 2 });
+      } else if (ann.type === "text") {
+        page.drawText(ann.text, { x: ann.x, y: ann.y, size: ann.size || 16, font, color: colorToRgb(ann.color) });
+      } else if (ann.type === "pen" && ann.points.length > 1) {
+        for (let i = 1; i < ann.points.length; i++) {
+          page.drawLine({ start: ann.points[i - 1], end: ann.points[i], thickness: ann.width || 2, color: colorToRgb(ann.color), opacity: 1 });
+        }
+      }
+    });
+  }
+
+  async function extractCurrentPage() {
+    if (!state.pdfLibDoc) return;
+    const extracted = await PDFDocument.create();
+    const index = state.currentPage - 1;
+    const [page] = await extracted.copyPages(state.pdfLibDoc, [index]);
+    const meta = state.pagesData[index];
+    if (meta?.rotation) page.setRotation(degrees((page.getRotation().angle + meta.rotation) % 360));
+    extracted.addPage(page);
+    if (meta?.annotations.length) {
+      const font = await extracted.embedFont(StandardFonts.Helvetica);
+      drawAnnotations(page, meta.annotations, font);
+    }
+    const blob = new Blob([await extracted.save()], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `${state.fileName.replace(/\.pdf$/i, "")}_page_${state.currentPage}.pdf`;
+    a.click();
     setTimeout(() => URL.revokeObjectURL(url), 4000);
   }
 
@@ -476,6 +538,7 @@
   document.getElementById("openFileBtn").addEventListener("click", () => fileInput.click());
   document.getElementById("mergeFileBtn").addEventListener("click", () => mergeInput.click());
   document.getElementById("savePdfBtn").addEventListener("click", exportPdf);
+  document.getElementById("extractPageBtn").addEventListener("click", extractCurrentPage);
 
   document.getElementById("prevPageBtn").addEventListener("click", () => {
     if (state.currentPage > 1) {

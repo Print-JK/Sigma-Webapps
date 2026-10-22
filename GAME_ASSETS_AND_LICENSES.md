@@ -1,5 +1,19 @@
 # Zombies3D — Game Assets, Architecture & Licensing Manifest
 
+## Fidelity and attribution correction — 2026-10-22
+
+The local `Assets/nzportable` checkout is the NZ:P hub repository. Its README says the engine, QuakeC game code, and game assets live in separate repositories; those are not present in this local checkout. Therefore the procedurally generated meshes/audio described below are Sigma-created prototype assets and must not be described as authentic NZ:P/CoD assets. The hub README alone does not establish the license of omitted component repositories or of Call of Duty audio/art. No upstream NZ:P assets were copied in this pass.
+
+The critical-health HUD and heartbeat are Sigma-authored CSS and Web Audio synthesis; they use no external image or audio files. A screenshot verifies the overlay style only; the heartbeat trigger/timing still needs combat testing.
+
+The barricade implementation in `Zombies3D/game.js` is original procedural geometry and gameplay code, not copied QuakeC. The prototype now connects the original 50×50 spawn room to a 30×30 east annex through a 1000-point rubble gate; the Mystery Box and rifle wall buy are in that annex, which has its own barricaded east window. This remains a small two-room prototype, not a faithful NZ:P/Nacht map. The generic MIT/CC0 labels in the original table do not establish third-party provenance; they apply only to original procedural output.
+
+### Update after the cross-app fidelity pass
+
+`Zombies3D/game.js` now contains a 50×50 spawn room connected east to a 30×30 annex. The rubble gate sits in the narrow doorway; purchasing it for 1000 points removes both its mesh and collision blocker. The Mystery Box and rifle wall buy are beyond the gate. The annex has an exterior barricaded window, and east/west boards are oriented in the window plane. Four spawn points remain at cardinal openings with five boards each and held-F repairs for +10 points. Rounds 1–4 shuffle; round 5+ uses faster movement, gait, and barricade attacks. All are Sigma-authored prototype mechanics. There is no upper floor or stair traversal, and obstacle steering is not general pathfinding. The local NZ:P hub checkout contains only its README/screenshots/build metadata, so no QuakeC or licensed NZ:P asset was used.
+
+Authentic upstream Lucide SVGs were copied only from `Assets/photocraft/assets/icons/` to `PhotoCraft/icons/` and `Assets/pdfcraft/assets/icons/` to `PdfCraft/icons/`. Each destination includes the upstream `LICENSE-lucide.txt`. These are used by the corresponding toolbars. The other five Craft asset trees do not provide an `assets/icons/` folder. No external game art/audio was copied or claimed.
+
 This document records the 3D rendering pipeline, procedural texture generators, mathematical models, Web Audio synthesizer architectures, and permissive open-source licensing for the **Zombies3D** survival game within **Sigma Webapps**.
 
 ---
@@ -66,7 +80,6 @@ All visual assets and textures in `Zombies3D` are procedurally generated in-brow
 
 ## 4. Verification & Testing
 
-- [x] Verified zero external audio/image network requests (fully offline).
-- [x] Validated Euler `YXZ` camera rotation in Chromium headless: No sudden gimbal lock, inverted flips, or camera desynchronization.
-- [x] Validated pointer lock acquisition/release and window blur listeners (zero stuck keys or runaway sliding).
-- [x] Verified articulated zombie walking animation and hit registration across multiple rounds.
+- [x] Static inspection confirms the game references the locally bundled Three.js engine and uses procedural Canvas/Web Audio assets; no external game media URLs are required by this implementation.
+- [x] `node --check Zombies3D/game.js` passes, and headless Chromium renders the local `file://` entry page and start overlay. Chromium reported software-WebGL fallback/performance warnings during this run.
+- [x] Headless Chromium clicked Start, acquired pointer lock, entered round I, and ran for 2.5 seconds with no uncaught browser exceptions. This verifies startup only; 1000-point gate purchase and annex traversal, movement, round-five sprint, barricade repair/breach, hit registration, damage feedback, and restart remain unverified.

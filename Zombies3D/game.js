@@ -42,6 +42,7 @@
 
   // Web Audio Context & Procedural Synthesizer
   let audioCtx = null;
+  let lowHealthHeartbeatTimer = null;
 
   function initAudio() {
     if (!audioCtx) {
@@ -146,6 +147,26 @@
       gain.connect(audioCtx.destination);
       osc.start(now);
       osc.stop(now + 0.25);
+    } else if (type === "heartbeat") {
+      // Two low, filtered thumps form a short procedural heartbeat, with no audio asset dependency.
+      [0, 0.19].forEach((offset, index) => {
+        const osc = audioCtx.createOscillator();
+        const filter = audioCtx.createBiquadFilter();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(index ? 47 : 58, now + offset);
+        osc.frequency.exponentialRampToValueAtTime(index ? 34 : 38, now + offset + 0.16);
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(105, now + offset);
+        gain.gain.setValueAtTime(0.001, now + offset);
+        gain.gain.exponentialRampToValueAtTime(index ? 0.075 : 0.11, now + offset + 0.025);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.18);
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now + offset);
+        osc.stop(now + offset + 0.19);
+      });
     } else if (type === "round") {
       // Eerie brass sting
       [220, 261.63, 311.13, 440].forEach((freq, idx) => {
@@ -453,10 +474,14 @@
   const wallHalf = 25;
 
   const walls = [
-    { pos: [0, wallHeight / 2, -wallHalf], size: [50, wallHeight, 1] }, // North
-    { pos: [0, wallHeight / 2, wallHalf], size: [50, wallHeight, 1] },  // South
-    { pos: [-wallHalf, wallHeight / 2, 0], size: [1, wallHeight, 50] }, // West
-    { pos: [wallHalf, wallHeight / 2, 0], size: [1, wallHeight, 50] }   // East
+    { pos: [-13.5, wallHeight / 2, -wallHalf], size: [22, wallHeight, 1] },
+    { pos: [13.5, wallHeight / 2, -wallHalf], size: [22, wallHeight, 1] },
+    { pos: [-13.5, wallHeight / 2, wallHalf], size: [22, wallHeight, 1] },
+    { pos: [13.5, wallHeight / 2, wallHalf], size: [22, wallHeight, 1] },
+    { pos: [-wallHalf, wallHeight / 2, -13.5], size: [1, wallHeight, 22] },
+    { pos: [-wallHalf, wallHeight / 2, 13.5], size: [1, wallHeight, 22] },
+    { pos: [wallHalf, wallHeight / 2, -13.5], size: [1, wallHeight, 22] },
+    { pos: [wallHalf, wallHeight / 2, 13.5], size: [1, wallHeight, 22] }
   ];
 
   walls.forEach(({ pos, size }) => {
@@ -465,6 +490,32 @@
     wall.position.set(...pos);
     scene.add(wall);
   });
+
+  // Connected Mystery Box annex beyond the eastern passage. Its only doorway
+  // is the already-open central bay; the buyable debris seals that threshold.
+  const annexFloor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), floorMat);
+  annexFloor.rotation.x = -Math.PI / 2;
+  annexFloor.position.x = 40;
+  annexFloor.receiveShadow = true;
+  scene.add(annexFloor);
+  const annexCeiling = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), ceilMat);
+  annexCeiling.rotation.x = Math.PI / 2;
+  annexCeiling.position.set(40, 6, 0);
+  scene.add(annexCeiling);
+  const annexWalls = [
+    { pos: [40, wallHeight / 2, -15], size: [30, wallHeight, 1] },
+    { pos: [40, wallHeight / 2, 15], size: [30, wallHeight, 1] },
+    { pos: [55, wallHeight / 2, -8.75], size: [1, wallHeight, 12.5] },
+    { pos: [55, wallHeight / 2, 8.75], size: [1, wallHeight, 12.5] }
+  ];
+  annexWalls.forEach(({ pos, size }) => {
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(...size), wallMat);
+    wall.position.set(...pos);
+    scene.add(wall);
+  });
+  const annexLamp = new THREE.PointLight(0x60a5fa, 1.4, 24);
+  annexLamp.position.set(42, 4.5, 0);
+  scene.add(annexLamp);
 
   // Pillars & Obstacles with hazard warning bands
   const obstacles = [];
@@ -502,6 +553,21 @@
     obstacles.push({ x: cx, z: cz, radius: 1.5 });
   });
 
+  // A purchasable debris pile seals the passage into the Mystery Box annex.
+  const debrisGroup = new THREE.Group();
+  debrisGroup.position.set(27.5, 0, 0);
+  const debrisMat = new THREE.MeshLambertMaterial({ color: 0x58544d, roughness: 1 });
+  [[-1.1, 0.5, 0.1, 2.2, 1, 1.2], [0.5, 0.9, -0.2, 1.5, 1.8, 1.4], [1.4, 0.35, 0.3, 1.4, 0.7, 1.1], [-0.1, 1.45, 0.2, 1.6, 0.55, 1]].forEach(([x, y, z, w, h, d]) => {
+    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1, 0), debrisMat);
+    rock.scale.set(w / 2, h / 2, d / 2);
+    rock.position.set(x, y, z);
+    debrisGroup.add(rock);
+  });
+  scene.add(debrisGroup);
+  const debrisObstacle = { x: 27.5, z: 0, radius: 2.7 };
+  obstacles.push(debrisObstacle);
+  const debrisBarrier = { group: debrisGroup, obstacle: debrisObstacle, cost: 1000, purchased: false, pos: new THREE.Vector3(27.5, 1.5, 0) };
+
   // Wall Buys & Perks Setup
   const wallBuys = [
     {
@@ -519,7 +585,7 @@
       weaponId: 2,
       cost: 1200,
       ammoCost: 600,
-      pos: new THREE.Vector3(24.4, 2, 0),
+      pos: new THREE.Vector3(40, 2, -14.4),
       color: 0x3b82f6
     },
     {
@@ -652,7 +718,7 @@
 
   // Mystery Box State & 3D Model
   const mysteryBox = {
-    pos: new THREE.Vector3(-18, 0, -18),
+    pos: new THREE.Vector3(45, 0, 0),
     cost: 950,
     isSpinning: false,
     offeredWeaponId: null,
@@ -913,11 +979,53 @@
 
   // Zombie Spawn Coordinates
   const spawnPoints = [
-    new THREE.Vector3(-22, 0, -22),
-    new THREE.Vector3(22, 0, -22),
-    new THREE.Vector3(-22, 0, 22),
-    new THREE.Vector3(22, 0, 22)
+    new THREE.Vector3(0, 0, -27),
+    new THREE.Vector3(57, 0, 0),
+    new THREE.Vector3(0, 0, 27),
+    new THREE.Vector3(-27, 0, 0)
   ];
+
+  // Four barricaded openings around the arena. Each opening has five
+  // individually removable boards; rebuilt boards are restored from the same
+  // local game state and never require downloaded assets.
+  const barricades = spawnPoints.map((point, index) => {
+    const opening = Math.abs(point.x) > Math.abs(point.z)
+      ? new THREE.Vector3(Math.sign(point.x) * 24.2, 0, 0)
+      : new THREE.Vector3(0, 0, Math.sign(point.z) * 24.2);
+    const horizontal = index === 0 || index === 2;
+    const boards = [];
+    const woodCanvas = document.createElement("canvas");
+    woodCanvas.width = 256; woodCanvas.height = 64;
+    const woodCtx = woodCanvas.getContext("2d");
+    woodCtx.fillStyle = "#76502b"; woodCtx.fillRect(0, 0, 256, 64);
+    for (let grain = 0; grain < 24; grain++) {
+      woodCtx.strokeStyle = grain % 3 === 0 ? "rgba(35,20,10,.35)" : "rgba(220,175,105,.16)";
+      woodCtx.lineWidth = 1 + (grain % 2);
+      woodCtx.beginPath(); woodCtx.moveTo(0, grain * 2.6); woodCtx.bezierCurveTo(75, grain * 2.6 - 4, 160, grain * 2.6 + 4, 256, grain * 2.6); woodCtx.stroke();
+    }
+    woodCtx.fillStyle = "#aaa08d";
+    [[8, 8], [248, 8], [8, 56], [248, 56]].forEach(([x, y]) => { woodCtx.beginPath(); woodCtx.arc(x, y, 2, 0, Math.PI * 2); woodCtx.fill(); });
+    const boardTexture = new THREE.CanvasTexture(woodCanvas);
+    const boardMaterial = new THREE.MeshStandardMaterial({ map: boardTexture, roughness: 0.95 });
+    for (let i = 0; i < 5; i++) {
+      const board = new THREE.Mesh(
+        new THREE.BoxGeometry(horizontal ? 5.2 : 0.14, 0.22, horizontal ? 0.14 : 5.2),
+        boardMaterial
+      );
+      board.position.set(opening.x, 0.55 + i * 0.42, opening.z);
+      // Geometry is already aligned to the window plane; rotating east/west
+      // boards here would turn their long axis through the wall instead.
+      board.rotation.y = 0.15;
+      scene.add(board);
+      boards.push(board);
+    }
+    return { pos: opening, boards, count: 5, rebuildProgress: 0 };
+  });
+  const setBarricadeCount = (windowState, count) => {
+    windowState.count = Math.max(0, Math.min(5, count));
+    windowState.boards.forEach((board, i) => { board.visible = i < windowState.count; });
+  };
+  let repairHeld = false;
 
   // Create Articulated Zombie Mesh
   function createZombieMesh() {
@@ -988,6 +1096,7 @@
     group.add(rightLegGroup);
 
     group.userData = {
+      torso,
       headGroup,
       leftArmGroup,
       rightArmGroup,
@@ -1005,14 +1114,21 @@
     mesh.position.copy(pt);
     scene.add(mesh);
 
-    const speed = 1.8 + Math.min(round * 0.25, 3.5);
+    // Preserve the slow, uneven opening rounds, then switch to the familiar
+    // fast pursuit pace at round five. Later rounds keep increasing pressure.
+    const isRunner = round >= 5;
+    const speed = isRunner
+      ? 3.6 + Math.min((round - 5) * 0.18, 1.4)
+      : 1.8 + round * 0.25;
     const maxHp = 70 + (round - 1) * 35;
 
     zombiesAlive.push({
       mesh,
+      barricade: barricades[spawnPoints.indexOf(pt)],
       hp: maxHp,
       maxHp,
       speed,
+      isRunner,
       attackCooldown: 0,
       animCycle: Math.random() * 10
     });
@@ -1046,6 +1162,8 @@
 
   document.addEventListener("pointerlockchange", () => {
     isPointerLocked = document.pointerLockElement === canvas;
+    syncLowHealthEffects();
+    if (!isPointerLocked) repairHeld = false;
     if (isPointerLocked) {
       blocker.style.display = "none";
     } else {
@@ -1085,7 +1203,7 @@
     if (e.code === "Space") keys.jump = true;
 
     if (e.code === "KeyR") reloadWeapon();
-    if (e.code === "KeyF") handleInteract();
+    if (e.code === "KeyF") { repairHeld = true; if (!e.repeat) handleInteract(); }
 
     if (e.code === "Digit1") switchWeapon(0);
     if (e.code === "Digit2") switchWeapon(1);
@@ -1093,6 +1211,7 @@
   });
 
   document.addEventListener("keyup", (e) => {
+    if (e.code === "KeyF") repairHeld = false;
     if (e.code === "KeyW") keys.forward = false;
     if (e.code === "KeyS") keys.backward = false;
     if (e.code === "KeyA") keys.left = false;
@@ -1302,6 +1421,15 @@
 
   // Wall Buy & Interaction
   function handleInteract() {
+    if (!debrisBarrier.purchased && camera.position.distanceTo(debrisBarrier.pos) < 4.5 && player.points >= debrisBarrier.cost) {
+      player.points -= debrisBarrier.cost;
+      pointsValEl.textContent = player.points;
+      debrisBarrier.purchased = true;
+      scene.remove(debrisBarrier.group);
+      obstacles.splice(obstacles.indexOf(debrisBarrier.obstacle), 1);
+      playSound("buy");
+      return;
+    }
     // 1. Mystery Box Interaction
     if (camera.position.distanceTo(mysteryBox.pos) < 3.5) {
       if (mysteryBox.offeredWeaponId !== null) {
@@ -1389,6 +1517,11 @@
   function checkInteractionPrompt() {
     let promptText = null;
 
+    const nearbyWindow = barricades.find((windowState) => camera.position.distanceTo(windowState.pos) < 3.2);
+    if (nearbyWindow && nearbyWindow.count < 5) {
+      promptText = `Hold F to Rebuild Barricade [+10 pts] (${nearbyWindow.count}/5)`;
+    }
+
     // 1. Check Wall Buys & Perks
     wallBuys.forEach((wb) => {
       if (camera.position.distanceTo(wb.pos) < 3.2) {
@@ -1422,6 +1555,10 @@
       }
     }
 
+    if (!debrisBarrier.purchased && camera.position.distanceTo(debrisBarrier.pos) < 4.5) {
+      promptText = `Press F to Clear Debris — ${debrisBarrier.cost} Pts`;
+    }
+
     if (promptText) {
       centerPrompt.textContent = promptText;
       centerPrompt.style.display = "block";
@@ -1442,6 +1579,22 @@
     const pct = Math.max(0, (player.health / player.maxHealth) * 100);
     healthBarFill.style.width = `${pct}%`;
     healthBarFill.classList.toggle("low", pct < 35);
+    syncLowHealthEffects();
+  }
+
+  function syncLowHealthEffects() {
+    const critical = player.health > 0 && (player.health / player.maxHealth) < 0.3 && isPointerLocked;
+    damageVignette.classList.toggle("critical", critical);
+    if (critical && !lowHealthHeartbeatTimer) {
+      playSound("heartbeat");
+      lowHealthHeartbeatTimer = window.setInterval(() => {
+        if (audioCtx?.state === "running" && player.health > 0 && (player.health / player.maxHealth) < 0.3 && isPointerLocked) playSound("heartbeat");
+        else syncLowHealthEffects();
+      }, 860);
+    } else if (!critical && lowHealthHeartbeatTimer) {
+      clearInterval(lowHealthHeartbeatTimer);
+      lowHealthHeartbeatTimer = null;
+    }
   }
 
   function renderPerks() {
@@ -1499,6 +1652,15 @@
 
     zombiesAlive.forEach((z) => scene.remove(z.mesh));
     zombiesAlive = [];
+    if (debrisBarrier.purchased) {
+      scene.add(debrisBarrier.group);
+      obstacles.push(debrisBarrier.obstacle);
+      debrisBarrier.purchased = false;
+    }
+    barricades.forEach((windowState) => {
+      windowState.rebuildProgress = 0;
+      setBarricadeCount(windowState, 5);
+    });
 
     player.pos.set(0, 1.7, 0);
     player.yaw = 0;
@@ -1582,9 +1744,18 @@
       let nextX = player.pos.x + moveDir.x * moveSpeed * dt;
       let nextZ = player.pos.z + moveDir.z * moveSpeed * dt;
 
-      // Arena Boundary Collisions (Walls)
-      nextX = Math.max(-23.5, Math.min(23.5, nextX));
+      // Starting room -> narrow debris passage -> annex. The two doorway
+      // crossings are closed until the 1000 point purchase removes the rubble.
+      const previousX = player.pos.x;
+      nextX = Math.max(-23.5, Math.min(debrisBarrier.purchased ? 53.5 : 23.5, nextX));
       nextZ = Math.max(-23.5, Math.min(23.5, nextZ));
+      if (!debrisBarrier.purchased) nextX = Math.min(nextX, 23.5);
+      if (previousX <= 23.5 && nextX > 23.5 && Math.abs(nextZ) > 2.2) nextX = 23.5;
+      if (previousX > 24.5 && nextX <= 24.5 && Math.abs(nextZ) > 2.2) nextX = 24.51;
+      if (previousX <= 28.5 && nextX > 28.5 && Math.abs(nextZ) > 2.2) nextX = 28.5;
+      if (previousX > 28.5 && nextX <= 28.5 && Math.abs(nextZ) > 2.2) nextX = 28.51;
+      if (nextX > 23.5 && nextX <= 28.5) nextZ = Math.max(-2.2, Math.min(2.2, nextZ));
+      else if (nextX > 28.5) nextZ = Math.max(-13.5, Math.min(13.5, nextZ));
 
       // Pillar & Obstacle Collisions
       obstacles.forEach((obs) => {
@@ -1618,15 +1789,18 @@
 
       // Update Zombies AI & Shambling Limb Animation
       zombiesAlive.forEach((z) => {
-        z.animCycle += dt * (z.speed * 2.2);
+        z.animCycle += dt * (z.speed * (z.isRunner ? 3.8 : 2.2));
         const limbStride = Math.sin(z.animCycle);
+        const strideLength = z.isRunner ? 0.9 : 0.55;
 
         // Articulated limbs animation
         if (z.mesh.userData && z.mesh.userData.leftLegGroup) {
-          z.mesh.userData.leftLegGroup.rotation.x = limbStride * 0.55;
-          z.mesh.userData.rightLegGroup.rotation.x = -limbStride * 0.55;
-          z.mesh.userData.leftArmGroup.rotation.x = -Math.PI / 2.2 + Math.sin(z.animCycle * 0.8) * 0.15;
-          z.mesh.userData.rightArmGroup.rotation.x = -Math.PI / 2.1 - Math.sin(z.animCycle * 0.8) * 0.15;
+          z.mesh.userData.leftLegGroup.rotation.x = limbStride * strideLength;
+          z.mesh.userData.rightLegGroup.rotation.x = -limbStride * strideLength;
+          const armSwing = Math.sin(z.animCycle * 0.9) * (z.isRunner ? 0.48 : 0.15);
+          z.mesh.userData.leftArmGroup.rotation.x = -Math.PI / 2.2 + armSwing;
+          z.mesh.userData.rightArmGroup.rotation.x = -Math.PI / 2.1 - armSwing;
+          if (z.mesh.userData.torso) z.mesh.userData.torso.rotation.x = z.isRunner ? -0.12 : 0;
           z.mesh.userData.headGroup.rotation.z = Math.sin(z.animCycle * 0.4) * 0.1;
         }
 
@@ -1640,12 +1814,36 @@
         // Shambling / limping bob
         z.mesh.position.y = Math.abs(limbStride) * 0.08;
 
+        // Zombies first tear down the boards at their spawn opening, one at a
+        // time, then enter the arena and pursue the player.
+        const barrier = z.barricade;
+        if (barrier && barrier.count > 0 && z.mesh.position.distanceTo(barrier.pos) < 2.6) {
+          z.attackCooldown -= dt;
+          if (z.attackCooldown <= 0) {
+            setBarricadeCount(barrier, barrier.count - 1);
+            z.attackCooldown = z.isRunner ? 0.8 : 1.25;
+          }
+          return;
+        }
+
         // Move towards player if outside melee range
         if (dist > 1.4) {
           const vx = (dx / dist) * z.speed * dt;
           const vz = (dz / dist) * z.speed * dt;
-          z.mesh.position.x += vx;
-          z.mesh.position.z += vz;
+          let nx = z.mesh.position.x + vx, nz = z.mesh.position.z + vz;
+          nx = Math.max(-24.5, Math.min(56.5, nx));
+          if (nx > 25 && nx <= 28.5) nz = Math.max(-2.2, Math.min(2.2, nz));
+          else if (nx > 28.5) nz = Math.max(-14.5, Math.min(14.5, nz));
+          else nz = Math.max(-24.5, Math.min(24.5, nz));
+          const collides = (x, zz) => obstacles.some((obstacle) => Math.hypot(x - obstacle.x, zz - obstacle.z) < obstacle.radius + 0.45);
+          if (!collides(nx, nz)) {
+            z.mesh.position.x = nx;
+            z.mesh.position.z = nz;
+          } else if (!collides(nx, z.mesh.position.z)) {
+            z.mesh.position.x = nx;
+          } else if (!collides(z.mesh.position.x, nz)) {
+            z.mesh.position.z = nz;
+          }
         } else {
           // Melee Attack
           z.attackCooldown -= dt;
@@ -1655,6 +1853,23 @@
           }
         }
       });
+
+      // Holding F steadily restores one board every 0.75 seconds. Each board
+      // awards ten points, matching the classic repair reward.
+      const repairTarget = barricades.find((windowState) => camera.position.distanceTo(windowState.pos) < 3.2 && windowState.count < 5);
+      if (repairHeld && repairTarget) {
+        repairTarget.rebuildProgress += dt;
+        if (repairTarget.rebuildProgress >= 0.75) {
+          repairTarget.rebuildProgress = 0;
+          setBarricadeCount(repairTarget, repairTarget.count + 1);
+          player.points += 10;
+          player.totalPointsEarned += 10;
+          pointsValEl.textContent = player.points;
+          playSound("buy");
+        }
+      } else {
+        barricades.forEach((windowState) => { windowState.rebuildProgress = 0; });
+      }
 
       // Update Powerup Pickups & Active Timers
       updatePowerups(dt, now);
