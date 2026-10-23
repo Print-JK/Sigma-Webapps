@@ -77,11 +77,34 @@
             await loadInlineFallback();
           }
         }
+        window.__sigmaCraftReady = true;
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ type: "sigma-craft-ready", app: "GridCraft" }, "*");
+        }
+        if (window.__sigmaPendingDrop) {
+          const f = window.__sigmaPendingDrop;
+          delete window.__sigmaPendingDrop;
+          setTimeout(() => window.__sigmaDispatchDrop(f), 450);
+        }
       } catch (err) {
         console.error("Failed to start GridCraft:", err);
         if (loadingEl) loadingEl.textContent = "Failed to start GridCraft: " + (err && err.message || err);
       }
     })();
+    window.__sigmaDispatchDrop = function(f) {
+      const canvas = document.getElementById("gridcraft_canvas");
+      if (!canvas || !f) return;
+      const dt = new DataTransfer();
+      dt.items.add(new File([f.buffer], f.name, { type: f.mime || "application/octet-stream" }));
+      canvas.focus();
+      canvas.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer: dt }));
+    };
+    window.addEventListener("message", (ev) => {
+      if (ev.data && ev.data.type === "sigma-craft-open-file") {
+        if (window.__sigmaCraftReady) setTimeout(() => window.__sigmaDispatchDrop(ev.data), 250);
+        else window.__sigmaPendingDrop = ev.data;
+      }
+    });
   </script>
 </body>
 </html>

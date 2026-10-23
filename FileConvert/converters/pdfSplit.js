@@ -1,8 +1,9 @@
 /**
  * pdfSplit.js — split one PDF into several PDFs.
- * Two modes:
- *   "every"  -> one output PDF per page
- *   "ranges" -> user-supplied ranges string, e.g. "1-3,5,8-10"
+ * Three modes (matching iLovePDF-Clone):
+ *   "all" / "every" -> one output PDF per page
+ *   "fixed"         -> fixed number of pages per output PDF
+ *   "range" / "ranges" -> user-supplied ranges string, e.g. "1-3,5,8-10"
  * Engine: pdf-lib (copyPages). Multiple outputs are zipped by app.js via
  * ConvUtils.packageResults.
  */
@@ -33,10 +34,17 @@
     const bytes = await readFileAsArrayBuffer(file);
     const src = await PDFDocument.load(bytes, { ignoreEncryption: true });
     const pageCount = src.getPageCount();
+    const mode = (options && options.mode) || "all";
 
     let groups;
-    if (options.mode === "every") {
+    if (mode === "every" || mode === "all") {
       groups = Array.from({ length: pageCount }, (_, i) => ({ start: i + 1, end: i + 1 }));
+    } else if (mode === "fixed") {
+      const step = Math.max(1, parseInt(options.fixed || 1, 10));
+      groups = [];
+      for (let p = 1; p <= pageCount; p += step) {
+        groups.push({ start: p, end: Math.min(p + step - 1, pageCount) });
+      }
     } else {
       groups = parseRanges(options.ranges || "", pageCount);
     }

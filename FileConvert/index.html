@@ -1,113 +1,183 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-<title>FileConvert — Local Document Conversion &amp; PDF Suite</title>
-<link rel="stylesheet" href="../assets/modern-theme.css" />
-<link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>FileConvert — iLovePDF Local Suite &amp; ArtCraft Document Workbench</title>
+  <link rel="stylesheet" href="../assets/modern-theme.css" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
-<!-- Top Navigation Pill Bar -->
-<div class="top-nav-bar">
-  <div class="nav-pill-bar">
-    <a href="../index.html" class="nav-pill-item" title="Back to Sigma Home">⌂ Home</a>
-    <span style="color: rgba(255,255,255,0.2);">|</span>
-    <span class="nav-pill-item active">🔄 FileConvert</span>
-    <span style="color: rgba(255,255,255,0.2);" class="nav-pipe-mobile-hide">|</span>
-    <span class="status-indicator">
-      <span class="status-dot online"></span>
-      <span style="font-size: 0.8rem; color: var(--text-muted);">100% Client-Side Suite</span>
-    </span>
-  </div>
-</div>
-
-<main>
-  <div class="page-header">
-    <h1>Document Conversion &amp; PDF Workbench</h1>
-    <p>Merge, split, organize, convert, watermark, and compress documents directly in your browser. Complete privacy — zero server transmission.</p>
-  </div>
-
-  <div class="tool-grid" id="toolGrid">
-    <!-- populated by app.js from TOOLS -->
-  </div>
-
-  <div class="workspace hidden glass-card" id="workspace">
-    <div class="workspace-header">
-      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-        <div>
-          <h2 id="workspaceTitle">—</h2>
-          <p class="workspace-sub" id="workspaceSub"></p>
-        </div>
-        <button class="btn btn-secondary" id="backToGridBtn" style="padding: 6px 14px; font-size: 0.82rem;">✕ Close Tool</button>
-      </div>
-      <div class="fidelity-notice hidden" id="fidelityNotice"></div>
-    </div>
-
-    <div class="workspace-body">
-      <!-- ============ Left: uploaded files list ============ -->
-      <div class="workspace-sidebar">
-        <div class="dropzone compact" id="dropzone">
-          <p>Drag &amp; Drop or <span class="browse-link" id="browseLink">Browse</span></p>
-          <input type="file" id="fileInput" class="hidden" multiple />
-        </div>
-        <div class="sidebar-label">FILES <span id="fileCountLabel"></span></div>
-        <div class="file-list" id="fileList"></div>
-        <button class="btn btn-secondary hidden" id="clearBtn">Clear all</button>
-      </div>
-
-      <!-- ============ Right: preview + options + actions ============ -->
-      <div class="workspace-main">
-        <div class="preview-header" id="previewHeader">
-          <span id="previewName">No file selected</span>
-          <span class="preview-meta" id="previewMeta"></span>
-        </div>
-        <div class="preview-body" id="previewBody">
-          <p class="preview-empty">Select a file on the left to preview it here.</p>
-        </div>
-
-        <div class="options" id="optionsArea"></div>
-
-        <div class="actions">
-          <button class="btn btn-primary" id="convertBtn" disabled>Process &amp; Convert</button>
-        </div>
-
-        <div class="status-area hidden" id="statusArea">
-          <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
-          <div class="status-line" id="statusLine">Preparing…</div>
-        </div>
-
-        <div class="results" id="resultsArea"></div>
-      </div>
+  <!-- PROGRESS OVERLAY -->
+  <div class="progress-overlay" id="progressOverlay">
+    <div class="spinner"></div>
+    <div class="progress-text" id="progressText">Processing your PDF…</div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="progressBarFill"></div>
     </div>
   </div>
-</main>
 
-<footer>FileConvert Suite &middot; Runs 100% locally via bundled open-source engines (pdf-lib, pdf.js, mammoth, pptxgenjs, xlsx, jszip)</footer>
+  <!-- ARTCRAFT ENGINE STUDIO MODAL -->
+  <div class="craft-modal" id="craftModal" role="dialog" aria-modal="true" aria-labelledby="craftModalTitle">
+    <div class="craft-modal-header">
+      <div class="craft-modal-title">
+        <span id="craftModalIcon">⚡</span>
+        <span id="craftModalTitle">ArtCraft Engine Studio</span>
+        <span class="craft-modal-hint" id="craftModalHint">— Your file is loaded directly into the native Rust/WASM ArtCraft engine (use File ▸ Export / Save to export).</span>
+      </div>
+      <div class="craft-modal-actions">
+        <button type="button" class="back-btn" id="craftResendBtn" onclick="resendFileToCraft()">↻ Send Selected File</button>
+        <a class="back-btn" id="craftOpenFullBtn" href="../PdfCraft/index.html" target="_blank" rel="noopener" style="text-decoration:none;">↗ Full Screen</a>
+        <button type="button" class="file-item-remove" onclick="closeCraftModal()">✕ Close</button>
+      </div>
+    </div>
+    <div class="craft-modal-frame-wrap">
+      <iframe id="craftIframe" title="ArtCraft Engine"></iframe>
+    </div>
+  </div>
 
-<!-- ===== Vendor libraries ===== -->
-<script src="../lib/pdf-lib.min.js"></script>
-<script src="../lib/pdf.min.js"></script>
-<script src="../lib/jszip.min.js"></script>
-<script src="../lib/mammoth.browser.min.js"></script>
-<script src="../lib/pptxgen.min.js"></script>
-<script src="../lib/xlsx.full.min.js"></script>
-<script src="../lib/fontkit.umd.min.js"></script>
-<script src="../lib/fonts-data.js"></script>
+  <!-- ═════════════════════════ APPLE LIQUID GLASS NAVBAR ═════════════════════ -->
+  <nav class="fc-navbar">
+    <div class="fc-nav-pill liquid-glass specular-hover">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <a href="../Main/index.html" class="fc-nav-btn" title="Back to Sigma Webapps">⌂ Home</a>
+        <span style="color:rgba(255,255,255,0.18);">|</span>
+        <a class="fc-brand" href="#" onclick="showHome();return false;">
+          <span class="fc-brand-badge">PDF</span>
+          <span>FileConvert</span>
+        </a>
+      </div>
 
-<!-- ===== Conversion engine modules ===== -->
-<script src="converters/utils.js"></script>
-<script src="converters/pdfMerge.js"></script>
-<script src="converters/pdfSplit.js"></script>
-<script src="converters/imagePdf.js"></script>
-<script src="converters/wordPdf.js"></script>
-<script src="converters/pptPdf.js"></script>
-<script src="converters/excelPdf.js"></script>
-<script src="converters/pdfOps.js"></script>
+      <div class="fc-nav-links" id="navCategoryLinks">
+        <button type="button" class="fc-nav-btn active" data-cat="all" onclick="filterTools('all')">All PDF Tools</button>
+        <button type="button" class="fc-nav-btn" data-cat="organize" onclick="filterTools('organize')">Merge &amp; Split</button>
+        <button type="button" class="fc-nav-btn" data-cat="to-pdf" onclick="filterTools('to-pdf')">Convert to PDF</button>
+        <button type="button" class="fc-nav-btn" data-cat="from-pdf" onclick="filterTools('from-pdf')">Convert from PDF</button>
+        <button type="button" class="fc-nav-btn" data-cat="security" onclick="filterTools('security')">Security &amp; Edit</button>
+      </div>
 
-<!-- ===== App shell / UI wiring ===== -->
-<script src="../assets/liquid-glass.js" defer></script>
-<script src="app.js"></script>
+      <div class="fc-nav-right">
+        <span class="fc-status-pill">
+          <span class="fc-status-dot"></span>
+          <span>100% Local · ArtCraft Suite</span>
+        </span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ══════════════════════════════════════ HOME PAGE ══════════════════════════ -->
+  <div id="homePage">
+    <div class="hero">
+      <h1>Every tool you need to work with PDFs in one place</h1>
+      <p>Every tool you need to merge, split, compress, convert, protect, unlock, and watermark PDFs — running 100% locally in your browser with native ArtCraft Suite integration.</p>
+    </div>
+
+    <div class="tools-section">
+      <div class="tools-grid" id="toolsGrid"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════ TOOL PAGE ══════════════════════════ -->
+  <div class="tool-page" id="toolPage">
+    <div class="tool-container">
+      <div class="tool-header glass-card specular-hover">
+        <div class="tool-header-left">
+          <button type="button" class="back-btn" onclick="showHome()">
+            ← Back to All PDF Tools
+          </button>
+          <div class="tool-header-info">
+            <h2 id="toolTitle">Tool</h2>
+            <p id="toolDesc">Description</p>
+          </div>
+        </div>
+        <button type="button" class="btn-craft-studio" id="headerCraftBtn" onclick="openCraftModalForCurrentTool()">
+          <span>⚡</span>
+          <span id="headerCraftBtnLabel">Open in ArtCraft Studio</span>
+        </button>
+      </div>
+
+      <!-- Drop Zone -->
+      <div class="dropzone glass-card specular-hover" id="dropzone">
+        <input type="file" id="fileInput" multiple />
+        <div class="dropzone-icon" id="dropIcon">📄</div>
+        <h3 id="dropTitle">Select PDF files</h3>
+        <p id="dropHint">or drop PDF files here</p>
+        <button type="button" class="btn-select" id="selectFilesBtn" onclick="document.getElementById('fileInput').click();event.stopPropagation()">
+          + Select files
+        </button>
+      </div>
+
+      <!-- File List -->
+      <div class="file-list" id="fileList"></div>
+
+      <!-- Options (tool-specific) -->
+      <div id="optionsArea"></div>
+
+      <!-- Error -->
+      <div class="error-panel" id="errorPanel" style="display:none">
+        <span>⚠️</span>
+        <span id="errorMsg"></span>
+      </div>
+
+      <!-- Action Bar -->
+      <div class="action-bar" id="actionBar" style="display:none">
+        <button type="button" class="btn-action" id="actionBtn" onclick="processFiles()">
+          <span id="actionBtnIcon">⚙️</span>
+          <span id="actionBtnLabel">Process</span>
+        </button>
+        <button type="button" class="btn-craft-studio" id="actionCraftBtn" onclick="openCraftModalForCurrentTool()">
+          <span>⚡</span>
+          <span id="actionCraftBtnLabel">Convert / Edit in ArtCraft Engine</span>
+        </button>
+      </div>
+
+      <!-- Result Panel -->
+      <div class="result-panel glass-card specular-hover" id="resultPanel" style="display:none">
+        <div class="result-icon">✅</div>
+        <h3 id="resultTitle">Done!</h3>
+        <p id="resultDesc">Your file is ready to download</p>
+        <div class="result-actions">
+          <a class="btn-download" id="downloadBtn" href="#" download>
+            ⬇️ Download
+          </a>
+          <button type="button" class="btn-craft-studio" id="resultCraftBtn" onclick="openResultInCraft()">
+            ⚡ Inspect Result in PdfCraft
+          </button>
+          <button type="button" class="btn-again" onclick="resetTool()">Process another file</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer id="mainFooter">
+    <div class="footer-logo">❤️ FileConvert · iLovePDF Local Suite</div>
+    <p>100% local, serverless PDF &amp; document tools — powered by ArtCraft Suite (PdfCraft, WordCraft, GridCraft, DeckCraft, PhotoCraft), pdf-lib, and pdf.js.</p>
+  </footer>
+
+  <!-- ===== Vendor libraries ===== -->
+  <script src="../lib/pdf-lib.min.js"></script>
+  <script src="../lib/pdf.min.js"></script>
+  <script src="../lib/jszip.min.js"></script>
+  <script src="../lib/mammoth.browser.min.js"></script>
+  <script src="../lib/pptxgen.min.js"></script>
+  <script src="../lib/xlsx.full.min.js"></script>
+  <script src="../lib/fontkit.umd.min.js"></script>
+  <script src="../lib/fonts-data.js"></script>
+
+  <!-- ===== Conversion engine modules ===== -->
+  <script src="converters/utils.js"></script>
+  <script src="converters/pdfMerge.js"></script>
+  <script src="converters/pdfSplit.js"></script>
+  <script src="converters/imagePdf.js"></script>
+  <script src="converters/wordPdf.js"></script>
+  <script src="converters/pptPdf.js"></script>
+  <script src="converters/excelPdf.js"></script>
+  <script src="converters/pdfOps.js"></script>
+
+  <!-- ===== App shell / UI wiring ===== -->
+  <script src="../assets/liquid-glass.js" defer></script>
+  <script src="app.js"></script>
 </body>
 </html>

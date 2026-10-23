@@ -1,894 +1,1055 @@
 /**
- * app.js — UI shell that wires the tool grid + workspace panel to the
- * Converters.* functions defined in converters/*.js. No conversion logic
- * lives here; this file only handles DOM/file plumbing.
+ * FileConvert/app.js
+ * Implements the iLovePDF-Clone architecture and tool suite 100% locally in-browser,
+ * styled with the Apple Liquid Glass design system and integrated with the
+ * compiled Rust/WASM ArtCraft Suite (PdfCraft, WordCraft, GridCraft, DeckCraft, PhotoCraft).
  */
-(function () {
+(function (global) {
   "use strict";
 
-  const TOOLS = [
-    {
-      id: "merge-pdf",
-      icon: "🧩",
+  const CRAFT_APPS = {
+    PdfCraft: {
+      name: "PdfCraft",
+      path: "../PdfCraft/index.html",
+      icon: "📕",
+      hint: "Native Rust PDF Editor — view, reorder, rotate, annotate, redact & export PDFs",
+    },
+    WordCraft: {
+      name: "WordCraft",
+      path: "../WordCraft/index.html",
+      icon: "📘",
+      hint: "Native Rust Word Processor — open .docx/.doc/.rtf/.md & export via File ▸ Print / Save",
+    },
+    GridCraft: {
+      name: "GridCraft",
+      path: "../GridCraft/index.html",
+      icon: "📗",
+      hint: "Native Rust Spreadsheet Engine — open .xlsx/.csv & export via File ▸ Export PDF",
+    },
+    DeckCraft: {
+      name: "DeckCraft",
+      path: "../DeckCraft/index.html",
+      icon: "📙",
+      hint: "Native Rust Presentation Suite — open .pptx/.md & export via File ▸ Export PDF",
+    },
+    PhotoCraft: {
+      name: "PhotoCraft",
+      path: "../PhotoCraft/index.html",
+      icon: "🎨",
+      hint: "Native Rust Raster & PSD Studio — open images/PSDs & export to PDF/JPG/PNG/WEBP",
+    },
+  };
+
+  // ── Complete Tool Definitions (iLovePDF-Clone + Sigma FileConvert) ─────────
+  const TOOLS = {
+    merge: {
+      id: "merge",
+      category: "organize",
       title: "Merge PDF",
-      description: "Combine multiple PDF files into one, in the order you choose.",
+      desc: "Combine PDFs in the order you want",
+      icon: "🔗",
+      theme: "ic-red",
+      dropTitle: "Select PDF files to merge",
+      dropHint: "Add at least 2 PDF files and arrange them in the order you want",
       accept: ".pdf",
       multiple: true,
       reorderable: true,
-      fidelity: "high",
+      minFiles: 2,
+      btnLabel: "Merge PDF",
+      btnIcon: "🔗",
       fn: "pdfMerge",
-      expectedKinds: ["pdf"],
+      craftApp: "PdfCraft",
+      options: null,
+      resultTitle: "PDFs merged!",
+      resultDesc: "Your merged PDF is ready.",
+      downloadName: "merged.pdf",
     },
-    {
-      id: "split-pdf",
-      icon: "✂️",
+    split: {
+      id: "split",
+      category: "organize",
       title: "Split PDF",
-      description: "Break a PDF into separate files by page ranges, or one file per page.",
+      desc: "Separate one page or a whole set",
+      icon: "✂️",
+      theme: "ic-orange",
+      dropTitle: "Select a PDF file to split",
+      dropHint: "Upload the PDF you want to split into separate files",
       accept: ".pdf",
       multiple: false,
-      fidelity: "high",
+      minFiles: 1,
+      btnLabel: "Split PDF",
+      btnIcon: "✂️",
       fn: "pdfSplit",
-      expectedKinds: ["pdf"],
-      renderOptions: renderSplitOptions,
-    },
-    {
-      id: "images-to-pdf",
-      icon: "🖼️",
-      title: "JPG / PNG to PDF",
-      description: "Turn one or more images into a single PDF, one image per page.",
-      accept: ".jpg,.jpeg,.png",
-      multiple: true,
-      reorderable: true,
-      fidelity: "high",
-      fn: "imagesToPdf",
-      expectedKinds: ["png", "jpg"],
-    },
-    {
-      id: "pdf-to-images",
-      icon: "🎞️",
-      title: "PDF to JPG / PNG",
-      description: "Export each PDF page as an image (zipped if there's more than one).",
-      accept: ".pdf",
-      multiple: false,
-      fidelity: "high",
-      fn: "pdfToImages",
-      expectedKinds: ["pdf"],
-      renderOptions: renderImageFormatOptions,
-    },
-    {
-      id: "word-to-pdf",
-      icon: "📄",
-      title: "Word to PDF",
-      description: "[Experimental] Convert a .docx document to PDF, preserving text, headings and lists.",
-      accept: ".docx",
-      multiple: false,
-      fidelity: "medium",
-      fn: "wordToPdf",
-      expectedKinds: ["docx"],
-    },
-    {
-      id: "pdf-to-word",
-      icon: "📝",
-      title: "PDF to Word",
-      description: "[Experimental] Extract PDF text into an editable .docx document.",
-      accept: ".pdf",
-      multiple: false,
-      fidelity: "low",
-      fn: "pdfToWord",
-      expectedKinds: ["pdf"],
-    },
-    {
-      id: "ppt-to-pdf",
-      icon: "📽️",
-      title: "PowerPoint to PDF",
-      description: "[Experimental] Flatten a .pptx deck's text and images onto PDF pages.",
-      accept: ".pptx",
-      multiple: false,
-      fidelity: "low",
-      fn: "pptToPdf",
-      expectedKinds: ["pptx"],
-    },
-    {
-      id: "pdf-to-ppt",
-      icon: "📊",
-      title: "PDF to PowerPoint",
-      description: "[Experimental] Place each PDF page as a full-page image on its own slide.",
-      accept: ".pdf",
-      multiple: false,
-      fidelity: "medium",
-      fn: "pdfToPpt",
-      expectedKinds: ["pdf"],
-    },
-    {
-      id: "excel-to-pdf",
-      icon: "📈",
-      title: "Excel to PDF",
-      description: "[Experimental] Render spreadsheet rows and columns as a ruled table in a PDF.",
-      accept: ".xlsx,.xls",
-      multiple: false,
-      fidelity: "medium",
-      fn: "excelToPdf",
-      expectedKinds: ["xlsx"],
-    },
-    {
-      id: "pdf-to-excel",
-      icon: "📉",
-      title: "PDF to Excel",
-      description: "[Experimental] Infer a table from PDF text positions and export it as .xlsx.",
-      accept: ".pdf",
-      multiple: false,
-      fidelity: "low",
-      fn: "pdfToExcel",
-      expectedKinds: ["pdf"],
-    },
-    {
-      id: "rotate-pdf",
-      icon: "🔄",
-      title: "Rotate PDF",
-      description: "Rotate PDF pages clockwise by 90°, 180°, or 270°.",
-      accept: ".pdf",
-      multiple: false,
-      fidelity: "high",
-      fn: "rotatePdf",
-      expectedKinds: ["pdf"],
-      renderOptions: renderRotateOptions,
-    },
-    {
-      id: "organize-pdf",
-      icon: "📑",
-      title: "Organize & Extract Pages",
-      description: "Extract specific page ranges or reorder pages in your PDF document.",
-      accept: ".pdf",
-      multiple: false,
-      fidelity: "high",
-      fn: "organizePdf",
-      expectedKinds: ["pdf"],
-      renderOptions: renderOrganizeOptions,
-    },
-    {
-      id: "page-numbers-pdf",
-      icon: "🔢",
-      title: "Add Page Numbers",
-      description: "Stamp customized page numbering (e.g. Page X of Y) onto PDF pages.",
-      accept: ".pdf",
-      multiple: false,
-      fidelity: "high",
-      fn: "addPageNumbers",
-      expectedKinds: ["pdf"],
-      renderOptions: renderPageNumbersOptions,
-    },
-    {
-      id: "watermark-pdf",
-      icon: "🛡️",
-      title: "Watermark PDF",
-      description: "Stamp diagonal text watermark (e.g. CONFIDENTIAL) onto all pages.",
-      accept: ".pdf",
-      multiple: false,
-      fidelity: "high",
-      fn: "watermarkPdf",
-      expectedKinds: ["pdf"],
-      renderOptions: renderWatermarkOptions,
-    },
-    {
-      id: "compress-pdf",
-      icon: "🗜️",
-      title: "Compress PDF",
-      description: "Re-encode PDF pages with optimized JPEG canvas compression.",
-      accept: ".pdf",
-      multiple: false,
-      fidelity: "medium",
-      fn: "compressPdf",
-      expectedKinds: ["pdf"],
-      renderOptions: renderCompressOptions,
-    },
-    {
-      id: "md-to-pdf",
-      icon: "📄",
-      title: "Markdown / TXT to PDF",
-      description: "Typeset Markdown or plain text into a clean multi-page PDF document.",
-      accept: ".md,.txt",
-      multiple: false,
-      fidelity: "high",
-      fn: "mdToPdf",
-      expectedKinds: ["txt", "md"],
-    },
-    {
-      id: "csv-excel",
-      icon: "📊",
-      title: "CSV ↔ Excel (XLSX)",
-      description: "Convert CSV spreadsheets to XLSX workbooks or XLSX to CSV.",
-      accept: ".csv,.xlsx",
-      multiple: false,
-      fidelity: "high",
-      fn: "csvExcel",
-      expectedKinds: ["xlsx", "csv"],
-    },
-  ];
-
-  const FIDELITY_LABEL = {
-    high: "High fidelity",
-    medium: "Good fidelity",
-    low: "Best-effort",
-  };
-
-  const FIDELITY_NOTE = {
-    high: null,
-    medium: "This conversion preserves the overall content well, but exact layout, fonts and styling may shift slightly — an inherent tradeoff of doing this entirely in the browser.",
-    low: "Client-side conversion for this format pair is inherently limited: complex layout, tables, and formatting will not be fully preserved. Treat the result as a content-recovery draft, not a pixel-perfect copy.",
-  };
-
-  // -------------------------------------------------------------------
-  // State
-  // -------------------------------------------------------------------
-  let activeTool = null;
-  // Each entry: { file, id, kind: 'pending'|<detected kind>, valid, pageCount, thumbnailUrl }
-  let entries = [];
-  let selectedEntryId = null;
-  let entrySeq = 0;
-
-  // -------------------------------------------------------------------
-  // DOM refs
-  // -------------------------------------------------------------------
-  const protocolBanner = document.getElementById("protocolBanner");
-  const toolGrid = document.getElementById("toolGrid");
-  const workspace = document.getElementById("workspace");
-  const workspaceTitle = document.getElementById("workspaceTitle");
-  const workspaceSub = document.getElementById("workspaceSub");
-  const dropzone = document.getElementById("dropzone");
-  const browseLink = document.getElementById("browseLink");
-  const fileInput = document.getElementById("fileInput");
-  const fileCountLabel = document.getElementById("fileCountLabel");
-  const fileListEl = document.getElementById("fileList");
-  const clearBtn = document.getElementById("clearBtn");
-  const previewName = document.getElementById("previewName");
-  const previewMeta = document.getElementById("previewMeta");
-  const previewBody = document.getElementById("previewBody");
-  const optionsArea = document.getElementById("optionsArea");
-  const fidelityNotice = document.getElementById("fidelityNotice");
-  const convertBtn = document.getElementById("convertBtn");
-  const statusArea = document.getElementById("statusArea");
-  const progressFill = document.getElementById("progressFill");
-  const statusLine = document.getElementById("statusLine");
-  const resultsArea = document.getElementById("resultsArea");
-
-  // -------------------------------------------------------------------
-  // file:// warning — pdf.js's worker (and some fetches) can silently
-  // fail under the file:// origin in Chromium-based browsers. Surface it
-  // up front instead of letting a tool look "broken" for no visible reason.
-  // -------------------------------------------------------------------
-  if (window.location.protocol === "file:" && protocolBanner) {
-    protocolBanner.classList.remove("hidden");
-  }
-
-  // -------------------------------------------------------------------
-  // Missing-library check — if any lib/*.js or converters/*.js file
-  // didn't actually load (wrong folder structure, a file left behind when
-  // copying, a 404 on a case-sensitive server, etc.), every tool that
-  // depends on it fails silently with no visible cause. Name exactly
-  // what's missing instead of leaving the UI looking inert.
-  // -------------------------------------------------------------------
-  (function checkRequiredLibraries() {
-    const required = [
-      ["PDFLib", "../lib/pdf-lib.min.js"],
-      ["pdfjsLib", "../lib/pdf.min.js"],
-      ["JSZip", "../lib/jszip.min.js"],
-      ["mammoth", "../lib/mammoth.browser.min.js"],
-      ["PptxGenJS", "../lib/pptxgen.min.js"],
-      ["XLSX", "../lib/xlsx.full.min.js"],
-      ["fontkit", "../lib/fontkit.umd.min.js"],
-      ["FONT_DATA", "../lib/fonts-data.js"],
-      ["ConvUtils", "converters/utils.js"],
-      ["Converters", "converters/*.js"],
-    ];
-    const missing = required.filter(([globalName]) => typeof window[globalName] === "undefined");
-    if (missing.length > 0 && protocolBanner) {
-      protocolBanner.classList.remove("hidden");
-      protocolBanner.innerHTML =
-        `⚠ Missing required file(s), so conversions will silently fail: ` +
-        missing.map(([, path]) => `<code>${path}</code>`).join(", ") +
-        `. Make sure the whole project folder (including <code>lib/</code> and ` +
-        `<code>converters/</code>) is next to <code>index.html</code>, then reload.`;
-      console.error("FileConvert: missing required globals ->", missing.map((m) => m[0]));
-    }
-  })();
-
-  // -------------------------------------------------------------------
-  // Tool grid
-  // -------------------------------------------------------------------
-  function renderToolGrid() {
-    toolGrid.innerHTML = "";
-    TOOLS.forEach((tool) => {
-      const card = document.createElement("div");
-      card.className = "tool-card";
-      card.dataset.toolId = tool.id;
-      card.innerHTML = `
-        <div class="tool-icon">${tool.icon}</div>
-        <h3>${tool.title}</h3>
-        <p>${tool.description}</p>
-        <span class="fidelity-tag ${tool.fidelity === "low" ? "caution" : ""}">${FIDELITY_LABEL[tool.fidelity]}</span>
-      `;
-      card.addEventListener("click", () => selectTool(tool.id));
-      toolGrid.appendChild(card);
-    });
-  }
-
-  function selectTool(toolId) {
-    activeTool = TOOLS.find((t) => t.id === toolId);
-    if (!activeTool) return;
-
-    [...toolGrid.children].forEach((card) => {
-      card.classList.toggle("active", card.dataset.toolId === toolId);
-    });
-
-    entries = [];
-    selectedEntryId = null;
-    resultsArea.innerHTML = "";
-    statusArea.classList.add("hidden");
-    fileInput.accept = activeTool.accept;
-    fileInput.multiple = !!activeTool.multiple;
-
-    workspace.classList.remove("hidden");
-    workspaceTitle.textContent = activeTool.title;
-    workspaceSub.textContent = activeTool.description;
-
-    if (activeTool.fidelity !== "high" && FIDELITY_NOTE[activeTool.fidelity]) {
-      fidelityNotice.textContent = "⚠ " + FIDELITY_NOTE[activeTool.fidelity];
-      fidelityNotice.classList.remove("hidden");
-    } else {
-      fidelityNotice.classList.add("hidden");
-    }
-
-    renderFileList();
-    renderPreview();
-    renderOptions();
-    updateConvertButton();
-
-    // scrollIntoView isn't implemented in every embedding context — guard it
-    // so a missing method can't abort tool selection (this previously threw
-    // and made the panel look unresponsive in some environments).
-    if (typeof workspace.scrollIntoView === "function") {
-      workspace.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }
-
-  // -------------------------------------------------------------------
-  // Dropzone / file input
-  // -------------------------------------------------------------------
-  browseLink.addEventListener("click", (e) => {
-    e.stopPropagation();
-    fileInput.click();
-  });
-  dropzone.addEventListener("click", () => fileInput.click());
-
-  ["dragenter", "dragover"].forEach((evt) =>
-    dropzone.addEventListener(evt, (e) => {
-      e.preventDefault();
-      dropzone.classList.add("dragover");
-    })
-  );
-  ["dragleave", "drop"].forEach((evt) =>
-    dropzone.addEventListener(evt, (e) => {
-      e.preventDefault();
-      dropzone.classList.remove("dragover");
-    })
-  );
-  dropzone.addEventListener("drop", (e) => {
-    handleIncomingFiles(e.dataTransfer.files);
-  });
-  fileInput.addEventListener("change", (e) => {
-    handleIncomingFiles(e.target.files);
-    fileInput.value = ""; // allow re-selecting the same file later
-  });
-
-  function handleIncomingFiles(fileListObj) {
-    if (!activeTool) return;
-    const incoming = Array.from(fileListObj);
-    if (incoming.length === 0) return;
-
-    const newEntries = incoming.map((file) => ({
-      id: ++entrySeq,
-      file,
-      kind: "pending",
-      valid: null,
-      pageCount: null,
-      thumbnailUrl: null,
-    }));
-
-    entries = activeTool.multiple ? entries.concat(newEntries) : newEntries;
-    resultsArea.innerHTML = "";
-    statusArea.classList.add("hidden");
-    selectedEntryId = newEntries[0].id;
-
-    renderFileList();
-    renderPreview();
-    updateConvertButton();
-
-    // Sniff each new file's real type in the background, then re-render
-    // once we know whether it actually matches what this tool expects.
-    newEntries.forEach((entry) => {
-      window.ConvUtils.detectFileKind(entry.file).then(async (kind) => {
-        entry.kind = kind;
-        entry.valid = activeTool.expectedKinds.includes(kind);
-
-        // For valid PDFs, parse once up front and cache the page count —
-        // both the split-range prefill and the preview thumbnail read from
-        // this instead of each independently (and separately) re-parsing
-        // the file, which previously meant the ranges field could still be
-        // empty by the time the user looked at it.
-        if (entry.valid && kind === "pdf") {
-          try {
-            entry.pdfDoc = await window.ConvUtils.loadPdfDocument(entry.file);
-            entry.pageCount = entry.pdfDoc.numPages;
-          } catch (err) {
-            entry.valid = false;
-            entry.loadError = err.message;
+      craftApp: "PdfCraft",
+      options: `
+        <div class="options-panel glass-card specular-hover">
+          <h4>Split Options</h4>
+          <div class="option-row">
+            <label>Split mode</label>
+            <div class="radio-group">
+              <label><input type="radio" name="splitMode" value="all" checked onchange="updateSplitUI()"> Extract all pages</label>
+              <label><input type="radio" name="splitMode" value="fixed" onchange="updateSplitUI()"> Fixed pages</label>
+              <label><input type="radio" name="splitMode" value="range" onchange="updateSplitUI()"> By ranges</label>
+            </div>
+          </div>
+          <div id="splitFixedRow" class="option-row" style="display:none">
+            <label>Pages per file</label>
+            <input type="number" id="splitFixed" value="1" min="1" style="max-width:120px">
+          </div>
+          <div id="splitRangeRow" class="option-row" style="display:none">
+            <label>Page ranges</label>
+            <input type="text" id="splitRanges" placeholder="e.g. 1-3, 5, 7-9">
+          </div>
+        </div>
+      `,
+      getOptions: () => {
+        const mode = document.querySelector("input[name=splitMode]:checked")?.value || "all";
+        const opts = { mode };
+        if (mode === "fixed") opts.fixed = document.getElementById("splitFixed")?.value || "1";
+        if (mode === "range") {
+          opts.ranges = (document.getElementById("splitRanges")?.value || "").trim();
+          if (!opts.ranges) {
+            showError("Please enter page ranges (e.g. 1-3, 5, 7-9).");
+            return null;
           }
         }
-
-        renderFileList();
-        updateConvertButton();
-        if (entry.id === selectedEntryId) renderPreview();
-        if (entry.valid && kind === "pdf" && activeTool.id === "split-pdf") {
-          prefillSplitRanges(entry);
+        return opts;
+      },
+      resultTitle: "PDF split!",
+      resultDesc: "Download your split PDF file(s).",
+      downloadName: "split_pages.zip",
+    },
+    compress: {
+      id: "compress",
+      category: "organize",
+      title: "Compress PDF",
+      desc: "Reduce file size while optimizing quality",
+      icon: "🗜️",
+      theme: "ic-green",
+      dropTitle: "Select a PDF to compress",
+      dropHint: "Upload the PDF file you want to reduce in size",
+      accept: ".pdf",
+      multiple: false,
+      minFiles: 1,
+      btnLabel: "Compress PDF",
+      btnIcon: "🗜️",
+      fn: "compressPdf",
+      craftApp: "PdfCraft",
+      options: `
+        <div class="options-panel glass-card specular-hover">
+          <h4>Compression Level</h4>
+          <div class="option-row">
+            <label>Preset</label>
+            <div class="radio-group">
+              <label><input type="radio" name="compressLevel" value="extreme"> Extreme (Smaller size)</label>
+              <label><input type="radio" name="compressLevel" value="recommended" checked> Recommended (Balanced)</label>
+              <label><input type="radio" name="compressLevel" value="high"> Less compression (High quality)</label>
+            </div>
+          </div>
+        </div>
+      `,
+      getOptions: () => {
+        const lvl = document.querySelector("input[name=compressLevel]:checked")?.value || "recommended";
+        if (lvl === "extreme") return { quality: 0.45, scale: 1.0 };
+        if (lvl === "high") return { quality: 0.82, scale: 1.5 };
+        return { quality: 0.65, scale: 1.2 };
+      },
+      resultTitle: "PDF compressed!",
+      resultDesc: "Your compressed PDF is ready.",
+      downloadName: "compressed.pdf",
+    },
+    "pdf-to-jpg": {
+      id: "pdf-to-jpg",
+      category: "from-pdf",
+      title: "PDF to JPG",
+      desc: "Convert each PDF page into a JPG or PNG image",
+      icon: "🖼️",
+      theme: "ic-blue",
+      dropTitle: "Select a PDF to convert",
+      dropHint: "Each page will be exported as a high-clarity image",
+      accept: ".pdf",
+      multiple: false,
+      minFiles: 1,
+      btnLabel: "Convert to Images",
+      btnIcon: "🖼️",
+      fn: "pdfToImages",
+      craftApp: "PdfCraft",
+      options: `
+        <div class="options-panel glass-card specular-hover">
+          <h4>Image Quality &amp; Format</h4>
+          <div class="option-row">
+            <label>Resolution (DPI)</label>
+            <div class="radio-group">
+              <label><input type="radio" name="dpi" value="72"> Low (72 DPI)</label>
+              <label><input type="radio" name="dpi" value="150" checked> Medium (150 DPI)</label>
+              <label><input type="radio" name="dpi" value="300"> High (300 DPI)</label>
+            </div>
+          </div>
+          <div class="option-row">
+            <label>Format</label>
+            <div class="radio-group">
+              <label><input type="radio" name="imgFmt" value="jpg" checked> JPG</label>
+              <label><input type="radio" name="imgFmt" value="png"> PNG</label>
+            </div>
+          </div>
+        </div>
+      `,
+      getOptions: () => ({
+        dpi: document.querySelector("input[name=dpi]:checked")?.value || "150",
+        imageFormat: document.querySelector("input[name=imgFmt]:checked")?.value || "jpg",
+      }),
+      resultTitle: "Conversion done!",
+      resultDesc: "Your exported page image(s) are ready.",
+      downloadName: "pdf_images.zip",
+    },
+    "jpg-to-pdf": {
+      id: "jpg-to-pdf",
+      category: "to-pdf",
+      title: "JPG to PDF",
+      desc: "Convert JPG, PNG, WEBP, BMP & GIF images to PDF in seconds",
+      icon: "📄",
+      theme: "ic-purple",
+      dropTitle: "Select image files",
+      dropHint: "Upload JPG, PNG, GIF, BMP, or WEBP files and arrange their page order",
+      accept: "image/*,.jpg,.jpeg,.png,.webp,.bmp,.gif",
+      multiple: true,
+      reorderable: true,
+      minFiles: 1,
+      btnLabel: "Convert to PDF",
+      btnIcon: "📄",
+      fn: "imagesToPdf",
+      craftApp: "PhotoCraft",
+      options: null,
+      resultTitle: "Conversion done!",
+      resultDesc: "Your PDF is ready.",
+      downloadName: "converted.pdf",
+    },
+    "word-to-pdf": {
+      id: "word-to-pdf",
+      category: "to-pdf",
+      title: "Word to PDF",
+      desc: "Make DOC and DOCX files easy to read as PDF",
+      icon: "📝",
+      theme: "ic-blue",
+      dropTitle: "Select a Word document",
+      dropHint: "Upload a .docx file to convert locally or open in WordCraft Engine",
+      accept: ".doc,.docx",
+      multiple: false,
+      minFiles: 1,
+      btnLabel: "Convert to PDF",
+      btnIcon: "📝",
+      fn: "wordToPdf",
+      craftApp: "WordCraft",
+      options: null,
+      resultTitle: "Conversion done!",
+      resultDesc: "Your Word document has been converted to PDF.",
+      downloadName: "converted.pdf",
+    },
+    "excel-to-pdf": {
+      id: "excel-to-pdf",
+      category: "to-pdf",
+      title: "Excel to PDF",
+      desc: "Make Excel spreadsheets easy to read as PDF tables",
+      icon: "📊",
+      theme: "ic-green",
+      dropTitle: "Select an Excel file",
+      dropHint: "Upload an .xlsx or .xls spreadsheet to convert locally or open in GridCraft Engine",
+      accept: ".xls,.xlsx,.csv",
+      multiple: false,
+      minFiles: 1,
+      btnLabel: "Convert to PDF",
+      btnIcon: "📊",
+      fn: "excelToPdf",
+      craftApp: "GridCraft",
+      options: null,
+      resultTitle: "Conversion done!",
+      resultDesc: "Your spreadsheet has been converted to PDF.",
+      downloadName: "converted.pdf",
+    },
+    "ppt-to-pdf": {
+      id: "ppt-to-pdf",
+      category: "to-pdf",
+      title: "PowerPoint to PDF",
+      desc: "Convert PowerPoint presentations (.pptx) to PDF",
+      icon: "📽️",
+      theme: "ic-orange",
+      dropTitle: "Select a PowerPoint presentation",
+      dropHint: "Upload a .pptx file to convert locally or open in DeckCraft Engine",
+      accept: ".pptx,.potx",
+      multiple: false,
+      minFiles: 1,
+      btnLabel: "Convert to PDF",
+      btnIcon: "📽️",
+      fn: "pptToPdf",
+      craftApp: "DeckCraft",
+      options: null,
+      resultTitle: "Conversion done!",
+      resultDesc: "Your presentation has been converted to PDF.",
+      downloadName: "converted.pdf",
+    },
+    rotate: {
+      id: "rotate",
+      category: "organize",
+      title: "Rotate PDF",
+      desc: "Rotate your PDFs the way you need them",
+      icon: "🔄",
+      theme: "ic-teal",
+      dropTitle: "Select a PDF to rotate",
+      dropHint: "Upload the PDF you want to rotate",
+      accept: ".pdf",
+      multiple: false,
+      minFiles: 1,
+      btnLabel: "Rotate PDF",
+      btnIcon: "🔄",
+      fn: "rotatePdf",
+      craftApp: "PdfCraft",
+      options: `
+        <div class="options-panel glass-card specular-hover">
+          <h4>Rotation Options</h4>
+          <div class="option-row">
+            <label>Rotate</label>
+            <div class="radio-group">
+              <label><input type="radio" name="rotateDeg" value="90" checked> 90° right (Clockwise)</label>
+              <label><input type="radio" name="rotateDeg" value="180"> 180°</label>
+              <label><input type="radio" name="rotateDeg" value="270"> 90° left (Counter-clockwise)</label>
+            </div>
+          </div>
+          <div class="option-row">
+            <label>Pages</label>
+            <input type="text" id="rotatePages" value="all" placeholder="all or e.g. 1, 3-5" style="max-width:260px">
+          </div>
+        </div>
+      `,
+      getOptions: () => ({
+        degrees: document.querySelector("input[name=rotateDeg]:checked")?.value || "90",
+        angle: document.querySelector("input[name=rotateDeg]:checked")?.value || "90",
+        pages: document.getElementById("rotatePages")?.value || "all",
+      }),
+      resultTitle: "PDF rotated!",
+      resultDesc: "Your rotated PDF is ready.",
+      downloadName: "rotated.pdf",
+    },
+    protect: {
+      id: "protect",
+      category: "security",
+      title: "Protect PDF",
+      desc: "Protect PDF files with a password (128-bit encryption)",
+      icon: "🔒",
+      theme: "ic-yellow",
+      dropTitle: "Select a PDF to protect",
+      dropHint: "Set a password on your PDF file locally",
+      accept: ".pdf",
+      multiple: false,
+      minFiles: 1,
+      btnLabel: "Protect PDF",
+      btnIcon: "🔒",
+      fn: "protectPdf",
+      craftApp: "PdfCraft",
+      options: `
+        <div class="options-panel glass-card specular-hover">
+          <h4>Set Password</h4>
+          <div class="option-row">
+            <label>Password</label>
+            <input type="password" id="pdfPassword" placeholder="Enter a password" style="max-width:300px">
+          </div>
+          <div class="option-row">
+            <label>Confirm</label>
+            <input type="password" id="pdfPasswordConfirm" placeholder="Confirm password" style="max-width:300px">
+          </div>
+        </div>
+      `,
+      getOptions: () => {
+        const p = document.getElementById("pdfPassword")?.value || "";
+        const c = document.getElementById("pdfPasswordConfirm")?.value || "";
+        if (!p) {
+          showError("Please enter a password");
+          return null;
         }
-      }).catch((err) => {
-        // Type detection itself failed (e.g. a required vendor library
-        // didn't load). Previously this left the badge on "…" forever with
-        // no visible cause — now it resolves to a clearly-flagged error
-        // state instead of hanging silently.
-        console.error("File type detection failed for", entry.file.name, err);
-        entry.kind = "unknown";
-        entry.valid = false;
-        entry.loadError = err && err.message ? err.message : String(err);
-        renderFileList();
-        updateConvertButton();
-        if (entry.id === selectedEntryId) renderPreview();
-      });
+        if (p !== c) {
+          showError("Passwords do not match");
+          return null;
+        }
+        return { password: p };
+      },
+      resultTitle: "PDF protected!",
+      resultDesc: "Your password-protected PDF is ready.",
+      downloadName: "protected.pdf",
+    },
+    unlock: {
+      id: "unlock",
+      category: "security",
+      title: "Unlock PDF",
+      desc: "Remove PDF password security",
+      icon: "🔓",
+      theme: "ic-pink",
+      dropTitle: "Select a protected PDF",
+      dropHint: "Enter the current password to unlock your PDF",
+      accept: ".pdf",
+      multiple: false,
+      minFiles: 1,
+      btnLabel: "Unlock PDF",
+      btnIcon: "🔓",
+      fn: "unlockPdf",
+      craftApp: "PdfCraft",
+      options: `
+        <div class="options-panel glass-card specular-hover">
+          <h4>Enter Password</h4>
+          <div class="option-row">
+            <label>Current password</label>
+            <input type="password" id="unlockPassword" placeholder="Enter PDF password" style="max-width:300px">
+          </div>
+        </div>
+      `,
+      getOptions: () => ({
+        password: document.getElementById("unlockPassword")?.value || "",
+      }),
+      resultTitle: "PDF unlocked!",
+      resultDesc: "Password removed. Your PDF is ready.",
+      downloadName: "unlocked.pdf",
+    },
+    watermark: {
+      id: "watermark",
+      category: "security",
+      title: "Watermark PDF",
+      desc: "Stamp custom text over your PDF pages",
+      icon: "💧",
+      theme: "ic-orange",
+      dropTitle: "Select a PDF to watermark",
+      dropHint: "Add a diagonal text watermark to all pages",
+      accept: ".pdf",
+      multiple: false,
+      minFiles: 1,
+      btnLabel: "Add Watermark",
+      btnIcon: "💧",
+      fn: "watermarkPdf",
+      craftApp: "PdfCraft",
+      options: `
+        <div class="options-panel glass-card specular-hover">
+          <h4>Watermark Settings</h4>
+          <div class="option-row">
+            <label>Watermark text</label>
+            <input type="text" id="wmText" placeholder="e.g. CONFIDENTIAL" value="CONFIDENTIAL" style="max-width:300px">
+          </div>
+          <div class="option-row">
+            <label>Opacity</label>
+            <div class="radio-group">
+              <label><input type="radio" name="wmOpacity" value="0.15"> Light</label>
+              <label><input type="radio" name="wmOpacity" value="0.3" checked> Medium</label>
+              <label><input type="radio" name="wmOpacity" value="0.5"> Strong</label>
+            </div>
+          </div>
+        </div>
+      `,
+      getOptions: () => ({
+        text: document.getElementById("wmText")?.value || "CONFIDENTIAL",
+        watermarkText: document.getElementById("wmText")?.value || "CONFIDENTIAL",
+        opacity: document.querySelector("input[name=wmOpacity]:checked")?.value || "0.3",
+      }),
+      resultTitle: "Watermark added!",
+      resultDesc: "Your watermarked PDF is ready.",
+      downloadName: "watermarked.pdf",
+    },
+    "pdf-to-word": {
+      id: "pdf-to-word",
+      category: "from-pdf",
+      title: "PDF to Word",
+      desc: "Extract PDF text into an editable .docx document",
+      icon: "📘",
+      theme: "ic-blue",
+      dropTitle: "Select a PDF to convert to Word",
+      dropHint: "Extracts structured paragraphs into a .docx file",
+      accept: ".pdf",
+      multiple: false,
+      minFiles: 1,
+      btnLabel: "Convert to Word",
+      btnIcon: "📘",
+      fn: "pdfToWord",
+      craftApp: "WordCraft",
+      options: null,
+      resultTitle: "Converted to Word!",
+      resultDesc: "Your editable .docx document is ready.",
+      downloadName: "converted.docx",
+    },
+    "pdf-to-ppt": {
+      id: "pdf-to-ppt",
+      category: "from-pdf",
+      title: "PDF to PowerPoint",
+      desc: "Turn each PDF page into a PowerPoint (.pptx) slide",
+      icon: "📙",
+      theme: "ic-orange",
+      dropTitle: "Select a PDF to convert to PowerPoint",
+      dropHint: "Places each PDF page onto a widescreen .pptx slide",
+      accept: ".pdf",
+      multiple: false,
+      minFiles: 1,
+      btnLabel: "Convert to PowerPoint",
+      btnIcon: "📙",
+      fn: "pdfToPpt",
+      craftApp: "DeckCraft",
+      options: null,
+      resultTitle: "Converted to PowerPoint!",
+      resultDesc: "Your .pptx presentation is ready.",
+      downloadName: "converted.pptx",
+    },
+    "pdf-to-excel": {
+      id: "pdf-to-excel",
+      category: "from-pdf",
+      title: "PDF to Excel",
+      desc: "Extract tabular text positions from PDF into .xlsx",
+      icon: "📗",
+      theme: "ic-green",
+      dropTitle: "Select a PDF to convert to Excel",
+      dropHint: "Infers rows and columns from PDF text positions",
+      accept: ".pdf",
+      multiple: false,
+      minFiles: 1,
+      btnLabel: "Convert to Excel",
+      btnIcon: "📗",
+      fn: "pdfToExcel",
+      craftApp: "GridCraft",
+      options: null,
+      resultTitle: "Converted to Excel!",
+      resultDesc: "Your .xlsx workbook is ready.",
+      downloadName: "converted.xlsx",
+    },
+    organize: {
+      id: "organize",
+      category: "organize",
+      title: "Organize PDF",
+      desc: "Extract specific page ranges or reorder pages in your PDF",
+      icon: "📑",
+      theme: "ic-purple",
+      dropTitle: "Select a PDF to organize",
+      dropHint: "Specify pages or ranges in the order you want them kept",
+      accept: ".pdf",
+      multiple: false,
+      minFiles: 1,
+      btnLabel: "Organize PDF",
+      btnIcon: "📑",
+      fn: "organizePdf",
+      craftApp: "PdfCraft",
+      options: `
+        <div class="options-panel glass-card specular-hover">
+          <h4>Page Selection &amp; Order</h4>
+          <div class="option-row">
+            <label>Keep pages / order</label>
+            <input type="text" id="orgPageRange" placeholder="e.g. 1-3, 5, 2 (leave blank for all)">
+          </div>
+        </div>
+      `,
+      getOptions: () => ({
+        pageRange: document.getElementById("orgPageRange")?.value || "",
+      }),
+      resultTitle: "PDF organized!",
+      resultDesc: "Your reorganized PDF is ready.",
+      downloadName: "organized.pdf",
+    },
+    "page-numbers": {
+      id: "page-numbers",
+      category: "security",
+      title: "Add Page Numbers",
+      desc: "Stamp customized page numbering (Page X of Y) onto PDF pages",
+      icon: "🔢",
+      theme: "ic-teal",
+      dropTitle: "Select a PDF to number",
+      dropHint: "Adds clean page numbers to the footer of every page",
+      accept: ".pdf",
+      multiple: false,
+      minFiles: 1,
+      btnLabel: "Add Page Numbers",
+      btnIcon: "🔢",
+      fn: "addPageNumbers",
+      craftApp: "PdfCraft",
+      options: `
+        <div class="options-panel glass-card specular-hover">
+          <h4>Page Numbering Options</h4>
+          <div class="option-row">
+            <label>Format</label>
+            <select id="pageNumFormat" style="max-width:240px">
+              <option value="page_of_total">Page X of Y</option>
+              <option value="number_only">Number only (1, 2, 3…)</option>
+            </select>
+          </div>
+          <div class="option-row">
+            <label>Position</label>
+            <select id="pageNumPos" style="max-width:240px">
+              <option value="bottom_center">Bottom Center</option>
+              <option value="bottom_right">Bottom Right</option>
+              <option value="bottom_left">Bottom Left</option>
+            </select>
+          </div>
+        </div>
+      `,
+      getOptions: () => ({
+        format: document.getElementById("pageNumFormat")?.value || "page_of_total",
+        position: document.getElementById("pageNumPos")?.value || "bottom_center",
+      }),
+      resultTitle: "Page numbers added!",
+      resultDesc: "Your numbered PDF is ready.",
+      downloadName: "numbered.pdf",
+    },
+    "md-to-pdf": {
+      id: "md-to-pdf",
+      category: "to-pdf",
+      title: "Markdown to PDF",
+      desc: "Typeset Markdown (.md) or plain text (.txt) into a clean PDF",
+      icon: "🗒️",
+      theme: "ic-purple",
+      dropTitle: "Select a Markdown or TXT file",
+      dropHint: "Upload a .md or .txt file to typeset into PDF",
+      accept: ".md,.txt",
+      multiple: false,
+      minFiles: 1,
+      btnLabel: "Convert to PDF",
+      btnIcon: "🗒️",
+      fn: "mdToPdf",
+      craftApp: "WordCraft",
+      options: null,
+      resultTitle: "Conversion done!",
+      resultDesc: "Your typeset PDF is ready.",
+      downloadName: "document.pdf",
+    },
+    "csv-excel": {
+      id: "csv-excel",
+      category: "from-pdf",
+      title: "CSV ↔ Excel (XLSX)",
+      desc: "Convert CSV spreadsheets to XLSX workbooks or XLSX to CSV",
+      icon: "🔄",
+      theme: "ic-green",
+      dropTitle: "Select a CSV or XLSX file",
+      dropHint: "Upload .csv to get .xlsx, or .xlsx to get .csv",
+      accept: ".csv,.xlsx,.xls",
+      multiple: false,
+      minFiles: 1,
+      btnLabel: "Convert Spreadsheet",
+      btnIcon: "🔄",
+      fn: "csvExcel",
+      craftApp: "GridCraft",
+      options: null,
+      resultTitle: "Spreadsheet converted!",
+      resultDesc: "Your converted spreadsheet is ready.",
+      downloadName: "converted_sheet.xlsx",
+    },
+  };
+
+  // Support legacy FileConvert IDs as aliases
+  const TOOL_ALIASES = {
+    "merge-pdf": "merge",
+    "split-pdf": "split",
+    "compress-pdf": "compress",
+    "pdf-to-images": "pdf-to-jpg",
+    "images-to-pdf": "jpg-to-pdf",
+    "rotate-pdf": "rotate",
+    "organize-pdf": "organize",
+    "page-numbers-pdf": "page-numbers",
+    "watermark-pdf": "watermark",
+  };
+
+  // ── State ────────────────────────────────────────────────────────────────────
+  let currentTool = null;
+  let currentCategory = "all";
+  let selectedFiles = [];
+  let lastResultBlob = null;
+  let lastResultName = "";
+
+  // ── Render Tool Grid ─────────────────────────────────────────────────────────
+  function renderToolsGrid(category = "all") {
+    const grid = document.getElementById("toolsGrid");
+    if (!grid) return;
+    grid.innerHTML = "";
+
+    Object.values(TOOLS).forEach((tool) => {
+      if (category !== "all" && tool.category !== category) return;
+      const craftInfo = CRAFT_APPS[tool.craftApp];
+      const card = document.createElement("a");
+      card.className = "tool-card glass-card specular-hover";
+      card.href = "#";
+      card.dataset.toolId = tool.id;
+      card.onclick = (e) => {
+        e.preventDefault();
+        openTool(tool.id);
+      };
+      card.innerHTML = `
+        <div class="tool-icon ${tool.theme}">${tool.icon}</div>
+        <h3>${tool.title}</h3>
+        <p>${tool.desc}</p>
+        ${craftInfo ? `<span class="craft-badge">${craftInfo.icon} ${craftInfo.name} Engine</span>` : ""}
+      `;
+      grid.appendChild(card);
     });
   }
 
-  function removeEntry(id) {
-    entries = entries.filter((e) => e.id !== id);
-    if (selectedEntryId === id) {
-      selectedEntryId = entries.length ? entries[0].id : null;
+  function filterTools(category) {
+    currentCategory = category || "all";
+    document.querySelectorAll("#navCategoryLinks .fc-nav-btn").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.cat === currentCategory);
+    });
+    showHome();
+    renderToolsGrid(currentCategory);
+  }
+
+  // ── Navigation ───────────────────────────────────────────────────────────────
+  function showHome() {
+    document.getElementById("homePage").style.display = "";
+    document.getElementById("toolPage").classList.remove("active");
+    document.getElementById("mainFooter").style.display = "";
+    currentTool = null;
+    selectedFiles = [];
+  }
+
+  function openTool(rawToolId) {
+    const toolId = TOOL_ALIASES[rawToolId] || rawToolId;
+    const tool = TOOLS[toolId];
+    if (!tool) return;
+    currentTool = toolId;
+    selectedFiles = [];
+    lastResultBlob = null;
+    lastResultName = "";
+
+    document.getElementById("homePage").style.display = "none";
+    document.getElementById("mainFooter").style.display = "none";
+    document.getElementById("toolPage").classList.add("active");
+
+    document.getElementById("toolTitle").textContent = tool.title;
+    document.getElementById("toolDesc").textContent = tool.desc;
+
+    document.getElementById("dropIcon").textContent = tool.icon;
+    document.getElementById("dropTitle").textContent = tool.dropTitle;
+    document.getElementById("dropHint").textContent = tool.dropHint;
+
+    const fi = document.getElementById("fileInput");
+    fi.accept = tool.accept || "*";
+    fi.multiple = tool.multiple !== false;
+
+    document.getElementById("optionsArea").innerHTML = tool.options || "";
+
+    document.getElementById("fileList").innerHTML = "";
+    document.getElementById("actionBar").style.display = "none";
+    document.getElementById("resultPanel").style.display = "none";
+    document.getElementById("errorPanel").style.display = "none";
+    document.getElementById("dropzone").style.display = "";
+
+    document.getElementById("actionBtnLabel").textContent = tool.btnLabel;
+    document.getElementById("actionBtnIcon").textContent = tool.btnIcon;
+
+    const craftInfo = CRAFT_APPS[tool.craftApp] || CRAFT_APPS.PdfCraft;
+    const headerCraftBtnLabel = document.getElementById("headerCraftBtnLabel");
+    if (headerCraftBtnLabel) {
+      headerCraftBtnLabel.textContent = `Open ${craftInfo.name} Studio`;
+    }
+    const actionCraftBtnLabel = document.getElementById("actionCraftBtnLabel");
+    if (actionCraftBtnLabel) {
+      actionCraftBtnLabel.textContent = `Open File in ${craftInfo.name} (ArtCraft Engine)`;
+    }
+  }
+
+  function resetTool() {
+    if (currentTool) openTool(currentTool);
+  }
+
+  // ── File Handling ────────────────────────────────────────────────────────────
+  function handleFiles(files) {
+    const tool = TOOLS[currentTool];
+    if (!tool) return;
+
+    const incoming = Array.from(files || []);
+    if (!incoming.length) return;
+
+    if (!tool.multiple) {
+      selectedFiles = [incoming[0]];
+    } else {
+      selectedFiles = [...selectedFiles, ...incoming];
     }
     renderFileList();
-    renderPreview();
-    updateConvertButton();
   }
 
-  clearBtn.addEventListener("click", () => {
-    entries = [];
-    selectedEntryId = null;
-    resultsArea.innerHTML = "";
-    statusArea.classList.add("hidden");
-    renderFileList();
-    renderPreview();
-    updateConvertButton();
-  });
-
-  // -------------------------------------------------------------------
-  // File list rendering (with simple drag-to-reorder for merge/image tools)
-  // -------------------------------------------------------------------
   function renderFileList() {
-    fileListEl.innerHTML = "";
-    fileCountLabel.textContent = entries.length ? `(${entries.length})` : "";
-    clearBtn.classList.toggle("hidden", entries.length === 0);
+    const tool = TOOLS[currentTool];
+    if (!tool) return;
+    const list = document.getElementById("fileList");
+    list.innerHTML = "";
 
-    entries.forEach((entry, index) => {
-      const row = document.createElement("div");
-      row.className = "file-row" +
-        (activeTool.reorderable ? " reorderable" : "") +
-        (entry.id === selectedEntryId ? " selected" : "");
-      row.draggable = !!activeTool.reorderable;
-      row.dataset.index = index;
-      row.dataset.entryId = entry.id;
-
-      const tagClass = entry.kind === "pending" ? "pending" : entry.valid ? "" : "bad";
-      const tagText = entry.kind === "pending" ? "…" : window.ConvUtils.KIND_LABEL[entry.kind];
-
-      row.innerHTML = `
-        <span class="file-icon">${activeTool.reorderable ? "⠿" : "📄"}</span>
-        <span class="file-name">${escapeHtml(entry.file.name)}</span>
-        <span class="kind-tag ${tagClass}">${tagText}</span>
-        <button class="file-remove" title="Remove">✕</button>
+    selectedFiles.forEach((f, i) => {
+      const div = document.createElement("div");
+      div.className = "file-item glass-card";
+      const canReorder = tool.multiple && selectedFiles.length > 1;
+      div.innerHTML = `
+        <span class="file-item-icon">${tool.icon || "📄"}</span>
+        <div class="file-item-info">
+          <div class="file-item-name">${escapeHtml(f.name)}</div>
+          <div class="file-item-meta">${formatSize(f.size)}</div>
+        </div>
+        <div class="file-item-actions">
+          ${canReorder ? `
+            <button type="button" class="file-item-btn" onclick="moveFile(${i}, -1)" ${i === 0 ? "disabled" : ""} title="Move Up">↑</button>
+            <button type="button" class="file-item-btn" onclick="moveFile(${i}, 1)" ${i === selectedFiles.length - 1 ? "disabled" : ""} title="Move Down">↓</button>
+          ` : ""}
+          <button type="button" class="file-item-remove" onclick="removeFile(${i})" title="Remove">✕</button>
+        </div>
       `;
-      row.addEventListener("click", (e) => {
-        if (e.target.closest(".file-remove")) return;
-        selectedEntryId = entry.id;
-        renderFileList();
-        renderPreview();
-      });
-      row.querySelector(".file-remove").addEventListener("click", (e) => {
-        e.stopPropagation();
-        removeEntry(entry.id);
-      });
-
-      if (activeTool.reorderable) {
-        row.addEventListener("dragstart", (e) => {
-          e.dataTransfer.setData("text/plain", index);
-        });
-        row.addEventListener("dragover", (e) => e.preventDefault());
-        row.addEventListener("drop", (e) => {
-          e.preventDefault();
-          const fromIndex = parseInt(e.dataTransfer.getData("text/plain"), 10);
-          const toIndex = index;
-          const [moved] = entries.splice(fromIndex, 1);
-          entries.splice(toIndex, 0, moved);
-          renderFileList();
-        });
-      }
-
-      fileListEl.appendChild(row);
+      list.appendChild(div);
     });
+
+    const enough = selectedFiles.length >= (tool.minFiles || 1);
+    document.getElementById("actionBar").style.display = selectedFiles.length > 0 ? "" : "none";
+    document.getElementById("actionBtn").disabled = !enough;
+    document.getElementById("errorPanel").style.display = "none";
+    document.getElementById("resultPanel").style.display = "none";
+  }
+
+  function moveFile(index, delta) {
+    const target = index + delta;
+    if (target < 0 || target >= selectedFiles.length) return;
+    const tmp = selectedFiles[index];
+    selectedFiles[index] = selectedFiles[target];
+    selectedFiles[target] = tmp;
+    renderFileList();
+  }
+
+  function removeFile(i) {
+    selectedFiles.splice(i, 1);
+    renderFileList();
+  }
+
+  function formatSize(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(2) + " MB";
   }
 
   function escapeHtml(str) {
-    const div = document.createElement("div");
-    div.textContent = str;
-    return div.innerHTML;
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
   }
 
-  // -------------------------------------------------------------------
-  // Preview pane — shows the currently-selected uploaded file: an image
-  // preview for JPG/PNG, a rendered first-page thumbnail + page count for
-  // PDFs, and basic file info for everything else (full layout preview of
-  // Office formats is out of scope for a client-side prototype).
-  // -------------------------------------------------------------------
-  function renderPreview() {
-    const entry = entries.find((e) => e.id === selectedEntryId);
-    if (!entry) {
-      previewName.textContent = "No file selected";
-      previewMeta.textContent = "";
-      previewBody.innerHTML = `<p class="preview-empty">Select a file on the left to preview it here.</p>`;
+  // ── Process & Convert ────────────────────────────────────────────────────────
+  async function processFiles() {
+    const tool = TOOLS[currentTool];
+    if (!tool || selectedFiles.length < (tool.minFiles || 1)) return;
+
+    let options = {};
+    if (tool.getOptions) {
+      options = tool.getOptions();
+      if (options === null) return;
+    }
+
+    const converterFn = global.Converters && global.Converters[tool.fn];
+    if (typeof converterFn !== "function") {
+      showError(`Converter "${tool.fn}" is not available.`);
       return;
     }
 
-    previewName.textContent = entry.file.name;
-    const kindLabel = entry.kind === "pending" ? "detecting…" : window.ConvUtils.KIND_LABEL[entry.kind];
-    previewMeta.textContent = `${window.ConvUtils.formatBytes(entry.file.size)} · ${kindLabel}`;
-
-    if (entry.kind === "pending") {
-      previewBody.innerHTML = `<p class="preview-empty"><span class="spinner"></span>Detecting file type…</p>`;
-      return;
-    }
-
-    if (!entry.valid) {
-      previewBody.innerHTML = `<p class="preview-error">This file looks like <strong>${window.ConvUtils.KIND_LABEL[entry.kind]}</strong>, ` +
-        `but "${escapeHtml(activeTool.title)}" needs ${activeTool.expectedKinds.map((k) => window.ConvUtils.KIND_LABEL[k]).join("/")}. ` +
-        `Remove it or pick a matching file.</p>`;
-      return;
-    }
-
-    if (entry.kind === "png" || entry.kind === "jpg") {
-      const url = URL.createObjectURL(entry.file);
-      previewBody.innerHTML = "";
-      const img = document.createElement("img");
-      img.src = url;
-      img.alt = entry.file.name;
-      previewBody.appendChild(img);
-      return;
-    }
-
-    if (entry.kind === "pdf") {
-      previewBody.innerHTML = `<p class="preview-empty"><span class="spinner"></span>Rendering preview…</p>`;
-      const showThumbnail = (pdfDoc, pageCount) => {
-        window.ConvUtils.getPdfThumbnail(pdfDoc, 0.5).then((thumbnailUrl) => {
-          entry.thumbnailUrl = thumbnailUrl;
-          if (entry.id !== selectedEntryId) return; // user moved on already
-          previewBody.innerHTML = "";
-          const img = document.createElement("img");
-          img.src = thumbnailUrl;
-          img.alt = "First page preview";
-          previewBody.appendChild(img);
-          const caption = document.createElement("p");
-          caption.className = "preview-meta";
-          caption.style.marginTop = "10px";
-          caption.textContent = `${pageCount} page${pageCount === 1 ? "" : "s"}`;
-          previewBody.appendChild(caption);
-        }).catch((err) => {
-          if (entry.id !== selectedEntryId) return;
-          previewBody.innerHTML = `<p class="preview-error">Couldn't render a preview: ${escapeHtml(err.message)}</p>`;
-        });
-      };
-
-      if (entry.pdfDoc) {
-        showThumbnail(entry.pdfDoc, entry.pageCount);
-      } else {
-        window.ConvUtils.loadPdfDocument(entry.file).then((pdfDoc) => {
-          entry.pdfDoc = pdfDoc;
-          entry.pageCount = pdfDoc.numPages;
-          if (entry.id !== selectedEntryId) return;
-          showThumbnail(pdfDoc, pdfDoc.numPages);
-        }).catch((err) => {
-          if (entry.id !== selectedEntryId) return;
-          previewBody.innerHTML = `<p class="preview-error">Couldn't render a preview: ${escapeHtml(err.message)}</p>`;
-        });
-      }
-      return;
-    }
-
-    // docx / pptx / xlsx — show basic info; full rendering is out of scope.
-    previewBody.innerHTML = `
-      <dl class="preview-info-grid">
-        <dt>File</dt><dd>${escapeHtml(entry.file.name)}</dd>
-        <dt>Size</dt><dd>${window.ConvUtils.formatBytes(entry.file.size)}</dd>
-        <dt>Detected type</dt><dd>${window.ConvUtils.KIND_LABEL[entry.kind]}</dd>
-      </dl>
-    `;
-  }
-
-  // -------------------------------------------------------------------
-  // Per-tool option panels
-  // -------------------------------------------------------------------
-  function renderOptions() {
-    optionsArea.innerHTML = "";
-    if (activeTool.renderOptions) {
-      activeTool.renderOptions(optionsArea);
-    }
-  }
-
-  function renderSplitOptions(container) {
-    container.innerHTML = `
-      <label>
-        Split mode
-        <select id="splitMode">
-          <option value="ranges">Custom page ranges</option>
-          <option value="every">One file per page</option>
-        </select>
-      </label>
-      <label id="rangesWrap">
-        Page ranges (e.g. 1-3,5,8-10)
-        <input type="text" id="splitRanges" placeholder="1-3,5,8-10" />
-        <span class="preview-error hidden" id="rangesError" style="text-align:left;"></span>
-      </label>
-    `;
-    const modeSelect = container.querySelector("#splitMode");
-    const rangesWrap = container.querySelector("#rangesWrap");
-    const rangesInput = container.querySelector("#splitRanges");
-    modeSelect.addEventListener("change", () => {
-      rangesWrap.style.display = modeSelect.value === "ranges" ? "flex" : "none";
-      updateConvertButton();
-    });
-    rangesInput.addEventListener("input", updateConvertButton);
-  }
-
-  // Once we know a selected PDF's page count, default the ranges field to
-  // "the whole document" so a first click on Convert has a sane, valid
-  // input instead of failing on an empty string.
-  function prefillSplitRanges(entry) {
-    const rangesInput = document.getElementById("splitRanges");
-    if (rangesInput && !rangesInput.value && entry.pageCount) {
-      rangesInput.value = entry.pageCount > 1 ? `1-${entry.pageCount}` : "1";
-    }
-    updateConvertButton();
-  }
-
-  function validateSplitRanges() {
-    const modeSelect = document.getElementById("splitMode");
-    const rangesInput = document.getElementById("splitRanges");
-    const errorEl = document.getElementById("rangesError");
-    if (!modeSelect || !rangesInput) return true; // options not rendered yet
-    if (modeSelect.value === "every") {
-      errorEl.classList.add("hidden");
-      return true;
-    }
-    const value = rangesInput.value.trim();
-    if (!value) {
-      errorEl.textContent = "Enter at least one page range, e.g. 1-3,5.";
-      errorEl.classList.remove("hidden");
-      return false;
-    }
-    if (!/^\s*\d+(\s*-\s*\d+)?(\s*,\s*\d+(\s*-\s*\d+)?)*\s*$/.test(value)) {
-      errorEl.textContent = "Use formats like 1-3, 5, 8-10 separated by commas.";
-      errorEl.classList.remove("hidden");
-      return false;
-    }
-    errorEl.classList.add("hidden");
-    return true;
-  }
-
-  function renderImageFormatOptions(container) {
-    container.innerHTML = `
-      <label>
-        Output format
-        <select id="imageFormat">
-          <option value="png">PNG</option>
-          <option value="jpg">JPG</option>
-        </select>
-      </label>
-    `;
-  }
-
-  function renderRotateOptions(container) {
-    container.innerHTML = `
-      <label>
-        Rotation angle
-        <select id="rotateAngle">
-          <option value="90">90° Clockwise</option>
-          <option value="180">180° Flip</option>
-          <option value="270">270° Counter-Clockwise</option>
-        </select>
-      </label>
-    `;
-  }
-
-  function renderOrganizeOptions(container) {
-    container.innerHTML = `
-      <label>
-        Pages to keep (e.g. 1-3, 5)
-        <input type="text" id="organizeRanges" placeholder="1-3, 5" />
-      </label>
-    `;
-  }
-
-  function renderPageNumbersOptions(container) {
-    container.innerHTML = `
-      <label>
-        Number format
-        <select id="pageNumberFormat">
-          <option value="page_of_total">Page X of Y</option>
-          <option value="number_only">Page Number Only (e.g. 1)</option>
-        </select>
-      </label>
-      <label>
-        Position
-        <select id="pageNumberPosition">
-          <option value="bottom_center">Bottom Center</option>
-          <option value="bottom_right">Bottom Right</option>
-          <option value="bottom_left">Bottom Left</option>
-        </select>
-      </label>
-    `;
-  }
-
-  function renderWatermarkOptions(container) {
-    container.innerHTML = `
-      <label>
-        Watermark text
-        <input type="text" id="watermarkText" value="CONFIDENTIAL" />
-      </label>
-      <label>
-        Opacity
-        <select id="watermarkOpacity">
-          <option value="0.15">Light (15%)</option>
-          <option value="0.25" selected>Standard (25%)</option>
-          <option value="0.45">Bold (45%)</option>
-        </select>
-      </label>
-    `;
-  }
-
-  function renderCompressOptions(container) {
-    container.innerHTML = `
-      <label>
-        Compression level
-        <select id="compressQuality">
-          <option value="0.8">Basic Compression (High Quality)</option>
-          <option value="0.65" selected>Recommended (Balanced)</option>
-          <option value="0.45">Maximum Compression (Smallest File)</option>
-        </select>
-      </label>
-    `;
-  }
-
-  function collectOptions() {
-    const opts = {};
-    if (activeTool.id === "split-pdf") {
-      opts.mode = document.getElementById("splitMode").value;
-      opts.ranges = document.getElementById("splitRanges").value;
-    }
-    if (activeTool.id === "pdf-to-images") {
-      opts.imageFormat = document.getElementById("imageFormat").value;
-    }
-    if (activeTool.id === "rotate-pdf") {
-      opts.angle = document.getElementById("rotateAngle")?.value || "90";
-    }
-    if (activeTool.id === "organize-pdf") {
-      opts.pageRange = document.getElementById("organizeRanges")?.value || "";
-    }
-    if (activeTool.id === "page-numbers-pdf") {
-      opts.format = document.getElementById("pageNumberFormat")?.value || "page_of_total";
-      opts.position = document.getElementById("pageNumberPosition")?.value || "bottom_center";
-    }
-    if (activeTool.id === "watermark-pdf") {
-      opts.watermarkText = document.getElementById("watermarkText")?.value || "CONFIDENTIAL";
-      opts.opacity = document.getElementById("watermarkOpacity")?.value || "0.25";
-    }
-    if (activeTool.id === "compress-pdf") {
-      opts.quality = document.getElementById("compressQuality")?.value || "0.65";
-    }
-    return opts;
-  }
-
-  // -------------------------------------------------------------------
-  // Convert button state + run
-  // -------------------------------------------------------------------
-  function updateConvertButton() {
-    if (!activeTool || entries.length === 0) {
-      convertBtn.disabled = true;
-      return;
-    }
-    // A tool can only run once every file is confirmed to be a type it
-    // actually accepts — this is what used to let a mismatched file sit
-    // silently in the list until conversion failed deep inside a library.
-    const allKnown = entries.every((e) => e.kind !== "pending");
-    const allValid = entries.every((e) => e.valid);
-
-    let optionsOk = true;
-    if (activeTool.id === "split-pdf") {
-      optionsOk = validateSplitRanges();
-    }
-
-    convertBtn.disabled = !(allKnown && allValid && optionsOk);
-  }
-
-  convertBtn.addEventListener("click", runConversion);
-
-  async function runConversion() {
-    if (!activeTool || entries.length === 0) return;
-
-    convertBtn.disabled = true;
-    resultsArea.innerHTML = "";
-    statusArea.classList.remove("hidden");
-    statusLine.classList.remove("error", "success");
-    progressFill.style.width = "0%";
-    statusLine.innerHTML = `<span class="spinner"></span>Starting…`;
+    showProgress("Processing your file…", 10);
+    document.getElementById("errorPanel").style.display = "none";
 
     try {
-      const options = collectOptions();
-      const files = entries.map((e) => e.file);
-      const fn = window.Converters[activeTool.fn];
-      if (!fn) throw new Error(`Converter "${activeTool.fn}" is not implemented yet.`);
+      const onProgress = (arg1, arg2) => {
+        if (typeof arg1 === "object" && arg1 !== null) {
+          showProgress(arg1.message || "Processing…", arg1.pct || 50);
+        } else {
+          showProgress(arg2 || "Processing…", typeof arg1 === "number" ? arg1 : 50);
+        }
+      };
 
-      const outputs = await fn(files, options, ({ pct, message }) => {
-        progressFill.style.width = `${pct}%`;
-        statusLine.innerHTML = `<span class="spinner"></span>${escapeHtml(message)}`;
-      });
+      const rawOutput = await converterFn(selectedFiles, options, onProgress);
 
-      const zipBaseName = `${activeTool.id}-output.zip`;
-      const packaged = await window.ConvUtils.packageResults(outputs, zipBaseName);
+      let finalBlob;
+      let finalFilename = tool.downloadName || "converted.pdf";
 
-      progressFill.style.width = "100%";
-      statusLine.textContent = "Conversion complete.";
-      statusLine.classList.add("success");
-      renderResults(packaged);
+      if (rawOutput instanceof Blob) {
+        finalBlob = rawOutput;
+        if (tool.id === "csv-excel" && selectedFiles[0]) {
+          const isCsv = selectedFiles[0].name.toLowerCase().endsWith(".csv");
+          finalFilename = window.ConvUtils.baseName(selectedFiles[0].name) + (isCsv ? ".xlsx" : ".csv");
+        }
+      } else if (Array.isArray(rawOutput)) {
+        if (rawOutput.length === 1) {
+          const item = rawOutput[0];
+          finalFilename = item.name || finalFilename;
+          finalBlob = item.data instanceof Blob ? item.data : new Blob([item.data], { type: item.mime || "application/octet-stream" });
+        } else {
+          showProgress("Packaging multiple files into ZIP archive…", 95);
+          const zip = new JSZip();
+          for (const item of rawOutput) {
+            const bytes = item.data instanceof Blob ? await item.data.arrayBuffer() : item.data;
+            zip.file(item.name, bytes);
+          }
+          finalBlob = await zip.generateAsync({ type: "blob" });
+          finalFilename = tool.downloadName.endsWith(".zip") ? tool.downloadName : `${tool.id}_files.zip`;
+        }
+      } else {
+        throw new Error("Unexpected converter output.");
+      }
+
+      lastResultBlob = finalBlob;
+      lastResultName = finalFilename;
+
+      const url = URL.createObjectURL(finalBlob);
+      const dlBtn = document.getElementById("downloadBtn");
+      dlBtn.href = url;
+      dlBtn.download = finalFilename;
+
+      document.getElementById("resultTitle").textContent = tool.resultTitle;
+      const sizeInfo = `${finalFilename} (${formatSize(finalBlob.size)})`;
+      document.getElementById("resultDesc").textContent = `${tool.resultDesc} — ${sizeInfo}`;
+
+      const resultCraftBtn = document.getElementById("resultCraftBtn");
+      if (resultCraftBtn) {
+        resultCraftBtn.style.display = finalFilename.toLowerCase().endsWith(".pdf") ? "" : "none";
+      }
+
+      document.getElementById("resultPanel").style.display = "";
+      document.getElementById("actionBar").style.display = "none";
+      document.getElementById("dropzone").style.display = "none";
+      document.getElementById("fileList").innerHTML = "";
     } catch (err) {
-      console.error(err);
-      statusLine.textContent = "Error: " + (err && err.message ? err.message : String(err));
-      statusLine.classList.add("error");
+      console.error("FileConvert error:", err);
+      showError(err && err.message ? err.message : String(err));
     } finally {
-      updateConvertButton();
+      hideProgress();
     }
   }
 
-  function renderResults(packaged) {
-    resultsArea.innerHTML = "";
-    packaged.forEach((result) => {
-      const row = document.createElement("div");
-      row.className = "result-row";
-      const url = URL.createObjectURL(result.blob);
-      row.innerHTML = `
-        <span class="result-name">📦 ${escapeHtml(result.name)} (${window.ConvUtils.formatBytes(result.blob.size)})</span>
-        <a class="download-link" href="${url}" download="${result.name}">Download</a>
-      `;
-      resultsArea.appendChild(row);
-    });
+  function showError(msg) {
+    document.getElementById("errorMsg").textContent = msg;
+    document.getElementById("errorPanel").style.display = "flex";
   }
 
-  const backToGridBtn = document.getElementById("backToGridBtn");
-  if (backToGridBtn) {
-    backToGridBtn.addEventListener("click", () => {
-      workspace.classList.add("hidden");
-      toolGrid.classList.remove("hidden");
-      activeTool = null;
-      entries = [];
-      renderFileList();
-    });
+  function showProgress(msg, pct) {
+    document.getElementById("progressText").textContent = msg;
+    const bar = document.getElementById("progressBarFill");
+    if (bar && typeof pct === "number") {
+      bar.style.width = `${Math.max(5, Math.min(100, pct))}%`;
+    }
+    document.getElementById("progressOverlay").classList.add("show");
   }
 
-  // -------------------------------------------------------------------
-  // Init
-  // -------------------------------------------------------------------
-  renderToolGrid();
-})();
+  function hideProgress() {
+    document.getElementById("progressOverlay").classList.remove("show");
+  }
+
+  function updateSplitUI() {
+    const mode = document.querySelector("input[name=splitMode]:checked")?.value;
+    const fixedRow = document.getElementById("splitFixedRow");
+    const rangeRow = document.getElementById("splitRangeRow");
+    if (fixedRow) fixedRow.style.display = mode === "fixed" ? "" : "none";
+    if (rangeRow) rangeRow.style.display = mode === "range" ? "" : "none";
+  }
+
+  // ── ArtCraft Suite Embedded Studio Integration ───────────────────────────────
+  let pendingCraftFile = null;
+
+  async function openCraftModalWithFile(craftKey, fileObj) {
+    const info = CRAFT_APPS[craftKey] || CRAFT_APPS.PdfCraft;
+    const modal = document.getElementById("craftModal");
+    const iframe = document.getElementById("craftIframe");
+    document.getElementById("craftModalIcon").textContent = info.icon;
+    document.getElementById("craftModalTitle").textContent = `${info.name} (ArtCraft Suite)`;
+    document.getElementById("craftModalHint").textContent = `— ${info.hint}`;
+    document.getElementById("craftOpenFullBtn").href = info.path;
+
+    if (fileObj) {
+      const buffer = await fileObj.arrayBuffer();
+      pendingCraftFile = {
+        type: "sigma-craft-open-file",
+        name: fileObj.name,
+        mime: fileObj.type || "application/octet-stream",
+        buffer,
+      };
+    } else {
+      pendingCraftFile = null;
+    }
+
+    modal.classList.add("open");
+    const currentSrc = iframe.getAttribute("src") || "";
+    if (!currentSrc.includes(info.path)) {
+      iframe.setAttribute("src", info.path);
+    } else if (pendingCraftFile && iframe.contentWindow) {
+      iframe.contentWindow.postMessage(pendingCraftFile, "*");
+    }
+  }
+
+  function openCraftModalForCurrentTool() {
+    const tool = TOOLS[currentTool];
+    const craftKey = (tool && tool.craftApp) || "PdfCraft";
+    const fileToPass = selectedFiles[0] || null;
+    openCraftModalWithFile(craftKey, fileToPass);
+  }
+
+  function resendFileToCraft() {
+    const iframe = document.getElementById("craftIframe");
+    if (pendingCraftFile && iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage(pendingCraftFile, "*");
+    } else if (selectedFiles[0]) {
+      openCraftModalForCurrentTool();
+    }
+  }
+
+  function openResultInCraft() {
+    if (!lastResultBlob) return;
+    const fileObj = new File([lastResultBlob], lastResultName || "result.pdf", {
+      type: lastResultBlob.type || "application/pdf",
+    });
+    openCraftModalWithFile("PdfCraft", fileObj);
+  }
+
+  function closeCraftModal() {
+    document.getElementById("craftModal").classList.remove("open");
+  }
+
+  window.addEventListener("message", (ev) => {
+    if (ev.data && ev.data.type === "sigma-craft-ready") {
+      const iframe = document.getElementById("craftIframe");
+      if (pendingCraftFile && iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage(pendingCraftFile, "*");
+      }
+    }
+  });
+
+  // ── Event Listeners ──────────────────────────────────────────────────────────
+  document.addEventListener("DOMContentLoaded", () => {
+    renderToolsGrid("all");
+
+    const fi = document.getElementById("fileInput");
+    if (fi) {
+      fi.addEventListener("change", function () {
+        if (this.files && this.files.length) handleFiles(this.files);
+        this.value = "";
+      });
+    }
+
+    const dz = document.getElementById("dropzone");
+    if (dz) {
+      dz.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dz.classList.add("dragover");
+      });
+      dz.addEventListener("dragleave", () => dz.classList.remove("dragover"));
+      dz.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dz.classList.remove("dragover");
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+          handleFiles(e.dataTransfer.files);
+        }
+      });
+    }
+  });
+
+  // Expose globals for inline handlers (matching iLovePDF-Clone)
+  global.TOOLS = TOOLS;
+  global.showHome = showHome;
+  global.openTool = openTool;
+  global.resetTool = resetTool;
+  global.filterTools = filterTools;
+  global.handleFiles = handleFiles;
+  global.removeFile = removeFile;
+  global.moveFile = moveFile;
+  global.processFiles = processFiles;
+  global.updateSplitUI = updateSplitUI;
+  global.openCraftModalForCurrentTool = openCraftModalForCurrentTool;
+  global.resendFileToCraft = resendFileToCraft;
+  global.openResultInCraft = openResultInCraft;
+  global.closeCraftModal = closeCraftModal;
+})(typeof window !== "undefined" ? window : globalThis);
