@@ -69,6 +69,22 @@
       }
       return plain;
     }
+
+    encryptByte(plainByte) {
+      const temp = (this.key2 | 2) >>> 0;
+      const k = (Math.imul(temp, temp ^ 1) >>> 8) & 0xff;
+      const cipherByte = (plainByte ^ k) & 0xff;
+      this.updateKeys(plainByte);
+      return cipherByte;
+    }
+
+    encrypt(plainBytes) {
+      const out = new Uint8Array(plainBytes.length);
+      for (let i = 0; i < plainBytes.length; i++) {
+        out[i] = this.encryptByte(plainBytes[i]);
+      }
+      return out;
+    }
   }
 
   /**
@@ -420,6 +436,9 @@
           } else {
             payload = decryptedPayload;
           }
+          if (entry.crc && crc32Buffer(payload) !== (entry.crc >>> 0)) {
+            throw new Error("Incorrect archive password (CRC32 verification failed).");
+          }
         }
       } else {
         // Not encrypted
@@ -553,10 +572,112 @@
     return candidates;
   }
 
+  /**
+   * Create a standard PKWARE ZipCrypto password-protected ZIP archive
+   * from an array of { name: string, data: Uint8Array } entries.
+   */
+  async function createPasswordProtectedZip(entries, passwordStr, onProgress) {
+    if (!passwordStr || !passwordStr.length) {
+      throw new Error("Password is required to create a password-protected ZIP.");
+    }
+    const encoder = new TextEncoder();
+    const localParts = [];
+    const centralParts = [];
+    let localOffset = 0;
+
+    for (let idx = 0; idx < entries.length; idx++) {
+      const item = entries[idx];
+      const nameBytes = encoder.encode(item.name);
+      const plainBytes = item.data instanceof Uint8Array ? item.data : new Uint8Array(item.data);
+      const crc = crc32Buffer(plainBytes) >>> 0;
+      const uncompSize = plainBytes.length;
+
+      // 12-byte ZipCrypto encryption header (11 random bytes + high byte of CRC32)
+      const headerPlain = new Uint8Array(12);
+      crypto.getRandomValues(headerPlain.subarray(0, 11));
+      headerPlain[11] = (crc >>> 24) & 0xff;
+
+      const cipher = new ZipCrypto(passwordStr);
+      const encHeader = cipher.encrypt(headerPlain);
+      const encPayload = cipher.encrypt(plainBytes);
+      const compSize = 12 + encPayload.length;
+
+      // Local File Header (30 + nameBytes.length)
+      const lh = new Uint8Array(30 + nameBytes.length);
+      const lhv = new DataView(lh.buffer);
+      lhv.setUint32(0, 0x04034b50, true); // signature
+      lhv.setUint16(4, 20, true);         // version needed (2.0)
+      lhv.setUint16(6, 0x0801, true);     // flags: bit 0 (encrypted) | bit 11 (UTF-8)
+      lhv.setUint16(8, 0, true);          // compression: STORE (0)
+      lhv.setUint16(10, 0, true);         // mod time
+      lhv.setUint16(12, 0x21, true);      // mod date
+      lhv.setUint32(14, crc, true);       // crc32
+      lhv.setUint32(18, compSize, true);  // compressed size
+      lhv.setUint32(22, uncompSize, true);// uncompressed size
+      lhv.setUint16(26, nameBytes.length, true); // file name length
+      lhv.setUint16(28, 0, true);         // extra field length
+      lh.set(nameBytes, 30);
+
+      // Central Directory File Header (46 + nameBytes.length)
+      const cd = new Uint8Array(46 + nameBytes.length);
+      const cdv = new DataView(cd.buffer);
+      cdv.setUint32(0, 0x02014b50, true); // signature
+      cdv.setUint16(4, 20, true);         // version made by
+      cdv.setUint16(6, 20, true);         // version needed
+      cdv.setUint16(8, 0x0801, true);     // flags: encrypted + UTF-8
+      cdv.setUint16(10, 0, true);         // compression: STORE (0)
+      cdv.setUint16(12, 0, true);         // mod time
+      cdv.setUint16(14, 0x21, true);      // mod date
+      cdv.setUint32(16, crc, true);       // crc32
+      cdv.setUint32(20, compSize, true);  // compressed size
+      cdv.setUint32(24, uncompSize, true);// uncompressed size
+      cdv.setUint16(28, nameBytes.length, true);
+      cdv.setUint16(30, 0, true);         // extra len
+      cdv.setUint16(32, 0, true);         // comment len
+      cdv.setUint16(34, 0, true);         // disk number
+      cdv.setUint16(36, 0, true);         // internal attrs
+      cdv.setUint32(38, 0, true);         // external attrs
+      cdv.setUint32(42, localOffset, true);
+      cd.set(nameBytes, 46);
+
+      localParts.push(lh, encHeader, encPayload);
+      centralParts.push(cd);
+      localOffset += lh.length + encHeader.length + encPayload.length;
+
+      if (onProgress) {
+        onProgress(Math.round(20 + ((idx + 1) / entries.length) * 70), `Encrypting ${item.name}…`);
+      }
+    }
+
+    let cdSize = 0;
+    for (const c of centralParts) cdSize += c.length;
+
+    const eocd = new Uint8Array(22);
+    const eocdv = new DataView(eocd.buffer);
+    eocdv.setUint32(0, 0x06054b50, true);
+    eocdv.setUint16(4, 0, true);
+    eocdv.setUint16(6, 0, true);
+    eocdv.setUint16(8, entries.length, true);
+    eocdv.setUint16(10, entries.length, true);
+    eocdv.setUint32(12, cdSize, true);
+    eocdv.setUint32(16, localOffset, true);
+    eocdv.setUint16(20, 0, true);
+
+    const out = new Uint8Array(localOffset + cdSize + 22);
+    let pos = 0;
+    for (const p of localParts) { out.set(p, pos); pos += p.length; }
+    for (const c of centralParts) { out.set(c, pos); pos += c.length; }
+    out.set(eocd, pos);
+
+    if (onProgress) onProgress(100, "Password-protected ZIP ready.");
+    return out;
+  }
+
   // Export to global scope
   global.ZipDecryptor = {
     inspectZipEncryption,
     decryptZipArchive,
+    createPasswordProtectedZip,
     inspectKeyCandidate,
     findSupportedKeys,
     crc32Buffer

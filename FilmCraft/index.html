@@ -1,122 +1,134 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FilmCraft — Nonlinear Video Studio</title>
-  <link rel="stylesheet" href="../assets/modern-theme.css" />
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>FilmCraft</title>
+  <style>
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #1b1c1f; }
+    canvas#filmcraft_canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; outline: none; }
+    #loading {
+      position: absolute; inset: 0; display: flex; flex-direction: column; gap: 14px;
+      align-items: center; justify-content: center; color: #c9c9cc;
+      font: 14px/1.4 system-ui, -apple-system, sans-serif; pointer-events: none; z-index: 5;
+    }
+    #loading .err { color: #ff8a7a; white-space: pre-wrap; max-width: 70ch; pointer-events: auto; }
+    #fatal {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      background: rgba(20, 20, 22, 0.88); color: #e6e6e8; font: 14px/1.45 system-ui, sans-serif; z-index: 10;
+    }
+    #fatal.on { display: flex; }
+    #fatal .box { max-width: min(78ch, calc(100vw - 32px)); padding: 20px 24px; background: #26272b; border-radius: 8px; }
+    #fatal h1 { margin: 0 0 8px; font-size: 17px; color: #ff8a7a; }
+    #fatal pre { max-height: 40vh; overflow: auto; white-space: pre-wrap; font-size: 12px; color: #c9c9cc; }
+    #fatal button { font: inherit; padding: 6px 14px; border: 0; border-radius: 6px; background: #3b6fe0; color: #fff; cursor: pointer; }
+    .sigma-home-pill {
+      position: fixed; bottom: 26px; right: 12px; z-index: 9999;
+      padding: 5px 12px; border-radius: 999px; font: 600 12px system-ui, -apple-system, sans-serif;
+      color: rgba(245,245,247,0.88); text-decoration: none;
+      background: rgba(28,28,36,0.78); border: 1px solid rgba(255,255,255,0.18);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.4); opacity: 0.45; transition: opacity 0.2s, transform 0.2s;
+    }
+    .sigma-home-pill:hover { opacity: 1; transform: translateY(-1px); color: #fff; }
+  </style>
 </head>
 <body>
-
-  <!-- Top App Navigation Bar -->
-  <header class="craft-header">
-    <div class="craft-brand">
-      <a href="../index.html" class="menu-btn" title="Back to Sigma Home">← Home</a>
-      <div class="craft-logo">
-        <span>🎬</span> FilmCraft <span style="font-size: 0.72rem; color: var(--gold-accent); font-weight: 500; border: 1px solid rgba(212,175,55,0.3); border-radius: 9999px; padding: 2px 8px; margin-left: 6px;">Studio</span>
-      </div>
-    </div>
-    <div class="craft-menu-bar">
-      <button class="menu-btn" id="importMediaTopBtn" onclick="document.getElementById('mediaFileInput').click()">+ Add Media</button>
-      <button class="menu-btn" id="btnSplit">✂ Split (S)</button>
-      <button class="menu-btn" id="btnDelete" style="color: #ef4444;">🗑 Delete (Del)</button>
-      <button class="menu-btn" id="btnExportVideo" style="background: var(--gold-accent); color: #000; font-weight: 600;">⚡ Export Video</button>
-    </div>
-  </header>
-
-  <!-- Studio Main Split -->
-  <div class="studio-layout">
-    
-    <!-- Top Half: Media Pool + 16:9 Canvas Viewport -->
-    <div class="top-studio-split">
-      <!-- Media Pool -->
-      <aside class="media-pool">
-        <div class="panel-header">
-          <span>PROJECT MEDIA</span>
-          <button id="importMediaBtn" class="menu-btn" style="padding: 2px 8px; font-size: 0.75rem;">+ Import</button>
-          <input type="file" id="mediaFileInput" multiple accept="video/*,audio/*,image/*" style="display: none;" />
-        </div>
-        <div id="mediaList" class="media-list">
-          <!-- Populated dynamically -->
-        </div>
-      </aside>
-
-      <section class="source-viewport" aria-label="Source monitor">
-        <div class="monitor-heading">SOURCE <span id="sourceMediaName">Select media</span></div>
-        <div class="source-media-stage">
-          <video id="sourceVideo" controls preload="metadata" hidden></video>
-          <img id="sourceImage" alt="Selected source media" hidden />
-          <audio id="sourceAudio" controls preload="metadata" hidden></audio>
-          <div id="sourcePlaceholder">Choose an item from Project Media</div>
-        </div>
-        <button id="btnAddSourceToTimeline" class="menu-btn source-insert-btn" disabled>＋ Add Source to Timeline</button>
-      </section>
-
-      <!-- Preview Viewport -->
-      <main class="preview-viewport">
-        <div class="preview-canvas-wrapper">
-          <canvas id="previewCanvas" width="1280" height="720"></canvas>
-        </div>
-        <div class="playback-controls-bar">
-          <button id="playPauseBtn" class="transport-btn" title="Play/Pause (Space)">▶</button>
-          <div id="timecodeDisplay" class="timecode-display">00:00:00:00</div>
-        </div>
-        <div class="clip-inspector">
-          <label>Scale <input id="clipScale" type="range" min="0.25" max="2" step="0.05" value="1"><output id="clipScaleValue">100%</output></label>
-          <label>Opacity <input id="clipOpacity" type="range" min="0" max="1" step="0.05" value="1"><output id="clipOpacityValue">100%</output></label>
-          <label>X <input id="clipPosX" type="range" min="-640" max="640" step="10" value="0"></label>
-          <label>Y <input id="clipPosY" type="range" min="-360" max="360" step="10" value="0"></label>
-        </div>
-      </main>
-    </div>
-
-    <!-- Bottom Half: Multi-Track Timeline -->
-    <div class="timeline-section">
-      <div class="timeline-toolbar">
-        <div>
-          <span>Multi-Track Timeline (Drag media from library onto tracks or drag clips horizontally)</span>
-        </div>
-        <div style="font-size: 0.75rem;">
-          <span style="display: inline-block; width: 10px; height: 10px; background: #ef4444; border-radius: 2px; margin-right: 4px;"></span>Video
-          <span style="display: inline-block; width: 10px; height: 10px; background: #10b981; border-radius: 2px; margin-left: 10px; margin-right: 4px;"></span>Audio
-        </div>
-      </div>
-
-      <div class="timeline-workspace">
-        <!-- Track Headers -->
-        <div class="track-headers-column">
-          <div class="track-header-item" style="height: 24px; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 0.7rem;">TIMELINE</div>
-          <div class="track-header-item">🎥 Video 1</div>
-          <div class="track-header-item">🎬 Video 2 (Overlay)</div>
-          <div class="track-header-item">🔊 Audio 1</div>
-          <div class="track-header-item">🔊 Audio 2</div>
-        </div>
-
-        <!-- Scrollable Tracks Area -->
-        <div class="tracks-scroll-area" id="tracksScrollArea">
-          <div class="tracks-canvas-container">
-            <!-- Ruler -->
-            <div class="timeline-ruler" id="timelineRuler"></div>
-
-            <!-- Track 0: Video 1 -->
-            <div class="track-row" id="trackRow_0"></div>
-            <!-- Track 1: Video 2 -->
-            <div class="track-row" id="trackRow_1"></div>
-            <!-- Track 2: Audio 1 -->
-            <div class="track-row" id="trackRow_2"></div>
-            <div class="track-row" id="trackRow_3"></div>
-
-            <!-- Playhead -->
-            <div class="timeline-playhead" id="playhead">
-              <div class="playhead-handle"></div>
-            </div>
-          </div>
-        </div>
-      </div>
+  <canvas id="filmcraft_canvas"></canvas>
+  <div id="loading"><div id="status">Loading FilmCraft…</div></div>
+  <div id="fatal" role="alertdialog" aria-labelledby="fatal-title">
+    <div class="box">
+      <h1 id="fatal-title">FilmCraft stopped working</h1>
+      <div>Unsaved changes are kept in the browser every few seconds and come back when you reload.</div>
+      <pre id="fatal-msg"></pre>
+      <button id="fatal-reload" type="button">Reload</button>
     </div>
   </div>
+  <a href="../Main/index.html" class="sigma-home-pill" title="Back to Sigma Webapps">⌂ Home</a>
+  <script src="filmcraft_web.js"></script>
+  <script>
+    window.filmcraftLoad = {};
+    let lastPanic = null;
+    const consoleError = console.error.bind(console);
+    console.error = (...a) => {
+      const m = a.map(String).join(" ");
+      if (/panicked at|memory allocation of/.test(m)) lastPanic = m;
+      consoleError(...a);
+    };
+    window.filmcraftFatal = (what) => {
+      if (window.filmcraftLoad.fatal) return;
+      const msg = lastPanic || String(what && (what.stack || what.message) || what);
+      window.filmcraftLoad.fatal = msg;
+      const el = document.getElementById("fatal");
+      document.getElementById("fatal-msg").textContent = msg.split("\n\nStack:")[0];
+      el.classList.add("on");
+    };
+    document.getElementById("fatal-reload").onclick = () => location.reload();
+    const isFatal = (e) => e instanceof WebAssembly.RuntimeError || /panicked at|unreachable|memory access out of bounds/.test(String(e && e.message || e));
+    addEventListener("error", (ev) => { if (window.filmcraftLoad.readyMs && isFatal(ev.error || ev.message)) window.filmcraftFatal(ev.error || ev.message); });
+    addEventListener("unhandledrejection", (ev) => { if (window.filmcraftLoad.readyMs && isFatal(ev.reason)) window.filmcraftFatal(ev.reason); });
 
-  <script src="app.js"></script>
+    (async function bootFilmCraft() {
+      if (!location.search.includes("webgl")) {
+        let useWebGL = false;
+        try {
+          const adapter = navigator.gpu ? await navigator.gpu.requestAdapter() : null;
+          if (!adapter) useWebGL = true;
+        } catch (_) { useWebGL = true; }
+        if (useWebGL) {
+          try {
+            const u = new URL(location.href);
+            u.searchParams.set("webgl", "1");
+            history.replaceState(null, "", u.toString());
+          } catch (_) {}
+        }
+      }
+      async function decodeGzipB64(b64) {
+        const bin = atob(b64);
+        const gzBytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) gzBytes[i] = bin.charCodeAt(i);
+        const ds = new DecompressionStream("gzip");
+        const writer = ds.writable.getWriter();
+        writer.write(gzBytes);
+        writer.close();
+        const buf = await new Response(ds.readable).arrayBuffer();
+        return new Uint8Array(buf);
+      }
+      async function loadInlineFallback() {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement("script");
+          s.src = "filmcraft_wasm_gz.js";
+          s.onload = resolve;
+          s.onerror = reject;
+          document.head.appendChild(s);
+        });
+        const bytes = await decodeGzipB64(window.__WASM_GZ_B64);
+        delete window.__WASM_GZ_B64;
+        await wasm_bindgen(bytes);
+      }
+      try {
+        const t0 = performance.now();
+        if (location.protocol === "file:") {
+          await loadInlineFallback();
+        } else {
+          try {
+            await wasm_bindgen("./filmcraft_web_bg.wasm");
+          } catch (_) {
+            await loadInlineFallback();
+          }
+        }
+        window.filmcraftLoad.wasmMs = performance.now() - t0;
+        await wasm_bindgen.start("filmcraft_canvas");
+        window.filmcraftLoad.readyMs = performance.now() - t0;
+      } catch (e) {
+        const text = String(e && e.stack || e);
+        window.filmcraftLoad.error = String(e);
+        const s = document.getElementById("status");
+        if (s) { s.className = "err"; s.textContent = "FilmCraft failed to start:\n" + text; }
+        console.error(e);
+      }
+    })();
+  </script>
 </body>
 </html>

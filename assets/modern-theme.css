@@ -206,7 +206,6 @@ html, body {
 /* Specular Hover Reflection Overlay */
 .specular-hover {
   position: relative;
-  overflow: hidden;
 }
 .specular-hover::before {
   content: "";

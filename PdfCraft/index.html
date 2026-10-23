@@ -1,102 +1,88 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PdfCraft — PDF Workbench</title>
-  <link rel="stylesheet" href="../assets/modern-theme.css" />
-  <link rel="stylesheet" href="style.css" />
-
-  <script src="../lib/pdf.min.js"></script>
-  <script src="../lib/pdf-lib.min.js"></script>
-</head>
-<body>
-
-  <!-- App Header & Top Menu -->
-  <header class="craft-header">
-    <div class="craft-brand">
-      <a href="../index.html" class="nav-pill-item" title="Back to Sigma Home" style="padding: 4px 10px;">⌂ Home</a>
-      <span style="color: rgba(255,255,255,0.2);">|</span>
-      <div class="craft-logo">📄 Pdf<span>Craft</span></div>
-    </div>
-
-    <div class="craft-menu-bar">
-      <button class="menu-btn" id="openFileBtn">📂 Open PDF</button>
-      <button class="menu-btn" id="mergeFileBtn">🧩 Merge Another PDF</button>
-      <button class="menu-btn" id="extractPageBtn">↗ Extract Current Page</button>
-      <button class="menu-btn" id="savePdfBtn" style="color: #34d399; font-weight: 600;">💾 Export PDF</button>
-      <input type="file" id="fileInput" accept=".pdf" style="display:none;" />
-      <input type="file" id="mergeInput" accept=".pdf" style="display:none;" />
-    </div>
-
-    <div>
-      <span class="status-indicator">
-        <span class="status-dot online"></span>
-        <span style="font-size: 0.8rem; color: var(--text-muted);">100% Client-Side</span>
-      </span>
-    </div>
-  </header>
-
-  <!-- Secondary Tools & Annotation Bar -->
-  <div class="craft-toolbar">
-    <div class="toolbar-group">
-      <button class="tool-btn" id="toggleSidebarBtn" title="Toggle Thumbnails Panel">📑 Thumbnails</button>
-      <div class="toolbar-separator"></div>
-      <button class="tool-btn active" id="tool_select" title="Selection / Pan Tool"><img src="icons/square-dashed-mouse-pointer.svg" alt=""> Select</button>
-      <button class="tool-btn" id="tool_highlight" title="Highlight Tool"><img src="icons/highlighter.svg" alt=""> Highlight</button>
-      <button class="tool-btn" id="tool_pen" title="Freehand Pen Tool"><img src="icons/pen-tool.svg" alt=""> Pen</button>
-      <button class="tool-btn" id="tool_rect" title="Rectangle Shape"><img src="icons/square.svg" alt=""> Box</button>
-      <button class="tool-btn" id="tool_text" title="Text Note"><img src="icons/text-cursor-input.svg" alt=""> Text</button>
-    </div>
-
-    <div class="toolbar-group">
-      <button class="tool-btn" id="zoomOutBtn" title="Zoom Out">−</button>
-      <select id="zoomSelect" class="form-control" style="width: auto; padding: 4px 8px; font-size: 0.8rem;">
-        <option value="0.75">75%</option>
-        <option value="1.0">100%</option>
-        <option value="1.25" selected>125%</option>
-        <option value="1.5">150%</option>
-        <option value="2.0">200%</option>
-      </select>
-      <button class="tool-btn" id="zoomInBtn" title="Zoom In">+</button>
-    </div>
-  </div>
-
-  <!-- Main Layout -->
-  <div class="craft-workspace">
-    <!-- Left Thumbnails Sidebar -->
-    <aside class="craft-sidebar" id="craftSidebar">
-      <div class="sidebar-header">
-        <span>PAGES</span>
-      </div>
-      <div class="thumbnails-scroll" id="thumbnailsScroll">
-        <!-- Dynamically rendered thumbnails -->
-      </div>
-    </aside>
-
-    <!-- Center Viewport -->
-    <main class="craft-viewport" id="viewport">
-      <div class="empty-workbench" id="emptyState">
-        <div class="icon">📑</div>
-        <h2>Welcome to PdfCraft</h2>
-        <p>An open-source, local-first PDF workbench. Open a PDF document to read, organize, rotate, annotate, and export.</p>
-        <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">Open PDF File</button>
-      </div>
-
-      <div class="pdf-page-container" id="pageContainer" style="display:none;">
-        <canvas id="pdfCanvas"></canvas>
-        <canvas id="annotationCanvas"></canvas>
-      </div>
-
-      <!-- Floating Bottom Navigation Bar -->
-      <div class="viewport-bottom-bar" id="bottomBar">
-      <button class="tool-btn" id="prevPageBtn" title="Previous Page"><img src="icons/chevron-left.svg" alt="Previous"></button>
-        <span class="page-indicator" id="pageIndicator">Page 1 of 1</span>
-      <button class="tool-btn" id="nextPageBtn" title="Next Page"><img src="icons/chevron-right.svg" alt="Next"></button>
-      </div>
-    </main>
-  </div>
-
-  <script src="app.js"></script>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PdfCraft</title>
+    <style>
+      html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #19191c; }
+      canvas#pdfcraft { position: absolute; inset: 0; width: 100%; height: 100%; display: block; outline: none; }
+      #pdfcraft_loading {
+        position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        color: #b8b8b8; font: 14px system-ui, -apple-system, sans-serif; pointer-events: none; z-index: 5;
+      }
+      .sigma-home-pill {
+        position: fixed; bottom: 26px; right: 12px; z-index: 9999;
+        padding: 5px 12px; border-radius: 999px; font: 600 12px system-ui, -apple-system, sans-serif;
+        color: rgba(245,245,247,0.88); text-decoration: none;
+        background: rgba(28,28,36,0.78); border: 1px solid rgba(255,255,255,0.18);
+        backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+        box-shadow: 0 4px 14px rgba(0,0,0,0.4); opacity: 0.45; transition: opacity 0.2s, transform 0.2s;
+      }
+      .sigma-home-pill:hover { opacity: 1; transform: translateY(-1px); color: #fff; }
+    </style>
+  </head>
+  <body>
+    <canvas id="pdfcraft"></canvas>
+    <div id="pdfcraft_loading">Loading PdfCraft…</div>
+    <a href="../Main/index.html" class="sigma-home-pill" title="Back to Sigma Webapps">⌂ Home</a>
+    <script src="pdfcraft-web.js"></script>
+    <script>
+      (async function bootPdfCraft() {
+        const loadingEl = document.getElementById("pdfcraft_loading");
+        if (!location.search.includes("webgl")) {
+          let useWebGL = false;
+          try {
+            const adapter = navigator.gpu ? await navigator.gpu.requestAdapter() : null;
+            if (!adapter) useWebGL = true;
+          } catch (_) { useWebGL = true; }
+          if (useWebGL) {
+            try {
+              const u = new URL(location.href);
+              u.searchParams.set("webgl", "1");
+              history.replaceState(null, "", u.toString());
+            } catch (_) {}
+          }
+        }
+        async function decodeGzipB64(b64) {
+          const bin = atob(b64);
+          const gzBytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) gzBytes[i] = bin.charCodeAt(i);
+          const ds = new DecompressionStream("gzip");
+          const writer = ds.writable.getWriter();
+          writer.write(gzBytes);
+          writer.close();
+          const buf = await new Response(ds.readable).arrayBuffer();
+          return new Uint8Array(buf);
+        }
+        async function loadInlineFallback() {
+          await new Promise((resolve, reject) => {
+            const s = document.createElement("script");
+            s.src = "pdfcraft_wasm_gz.js";
+            s.onload = resolve;
+            s.onerror = reject;
+            document.head.appendChild(s);
+          });
+          const bytes = await decodeGzipB64(window.__WASM_GZ_B64);
+          delete window.__WASM_GZ_B64;
+          await wasm_bindgen(bytes);
+        }
+        try {
+          if (location.protocol === "file:") {
+            await loadInlineFallback();
+          } else {
+            try {
+              await wasm_bindgen("./pdfcraft-web_bg.wasm");
+            } catch (_) {
+              await loadInlineFallback();
+            }
+          }
+          if (loadingEl) loadingEl.style.display = "none";
+        } catch (err) {
+          console.error("Failed to start PdfCraft:", err);
+          if (loadingEl) loadingEl.textContent = "Failed to start PdfCraft: " + (err && err.message || err);
+        }
+      })();
+    </script>
+  </body>
 </html>
